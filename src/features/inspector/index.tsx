@@ -1,4 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Files, GitBranch } from "lucide-react";
+import {
+	type ReactNode,
+	type TouchEvent,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import { Button } from "@/components/ui/button";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type {
 	CommitButtonState,
 	WorkspaceCommitButtonMode,
@@ -28,6 +43,7 @@ import {
 	TERMINAL_INSTANCE_LIMIT,
 	type TerminalInstance,
 } from "./terminal-store";
+import { WorkspaceFilesView } from "./workspace-files-view";
 
 type WorkspaceInspectorSidebarProps = {
 	workspaceId?: string | null;
@@ -40,6 +56,7 @@ type WorkspaceInspectorSidebarProps = {
 	editorMode: boolean;
 	activeEditorPath?: string | null;
 	onOpenEditorFile(path: string, options?: DiffOpenOptions): void;
+	onOpenWorkspaceFile?: (path: string) => void;
 	onOpenMockReview?: (path: string) => void;
 	onCommitAction?: (mode: WorkspaceCommitButtonMode) => Promise<void>;
 	currentSessionId?: string | null;
@@ -71,6 +88,7 @@ export function WorkspaceInspectorSidebar({
 	editorMode,
 	activeEditorPath,
 	onOpenEditorFile,
+	onOpenWorkspaceFile,
 	onCommitAction,
 	currentSessionId,
 	onQueuePendingPromptForSession,
@@ -103,6 +121,9 @@ export function WorkspaceInspectorSidebar({
 		workspaceId: workspaceId ?? null,
 		repoId: repoId ?? null,
 	});
+	const [sidebarView, setSidebarView] =
+		useState<InspectorSidebarView>("activity");
+	const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
 	// Fire setup auto-run / auto-complete at the sidebar level so it runs even
 	// when the Setup tab isn't mounted (tabsOpen=false).
@@ -353,100 +374,237 @@ export function WorkspaceInspectorSidebar({
 
 	const handleOpenSettings = onOpenSettings ?? (() => {});
 
+	const handleTouchStart = useCallback((event: TouchEvent<HTMLDivElement>) => {
+		const touch = event.touches[0];
+		if (!touch) return;
+		touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+	}, []);
+
+	const handleTouchEnd = useCallback((event: TouchEvent<HTMLDivElement>) => {
+		const start = touchStartRef.current;
+		touchStartRef.current = null;
+		const touch = event.changedTouches[0];
+		if (!start || !touch) return;
+
+		const deltaX = touch.clientX - start.x;
+		const deltaY = touch.clientY - start.y;
+		if (Math.abs(deltaX) < INSPECTOR_VIEW_SWIPE_DISTANCE) return;
+		if (Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+
+		setSidebarView(deltaX < 0 ? "files" : "activity");
+	}, []);
+
 	return (
-		<div
-			ref={containerRef}
-			className={cn(
-				"flex h-full min-h-0 flex-col bg-sidebar",
-				isResizing && "select-none",
-			)}
-		>
-			<ChangesSection
-				bodyHeight={changesHeight}
-				workspaceId={workspaceId ?? null}
-				workspaceRootPath={workspaceRootPath ?? null}
-				workspaceTargetBranch={workspaceTargetBranch ?? null}
-				changes={changes}
-				editorMode={editorMode}
-				activeEditorPath={activeEditorPath}
-				onOpenEditorFile={onOpenEditorFile}
-				flashingPaths={flashingPaths}
-				onCommitAction={onCommitAction}
-				commitButtonMode={commitButtonMode}
-				commitButtonState={commitButtonState}
-				changeRequest={changeRequest ?? null}
-				forgeIsRefreshing={forgeIsRefreshing}
+		<div className="flex h-full min-h-0 bg-sidebar">
+			<InspectorViewRail
+				activeView={sidebarView}
+				onViewChange={setSidebarView}
 			/>
-
-			<HorizontalResizeHandle
-				onMouseDown={handleResizeStart("actions")}
-				isActive={isActionsResizing}
-			/>
-
-			<ActionsSection
-				workspaceId={workspaceId ?? null}
-				workspaceState={workspaceState ?? null}
-				repoId={repoId ?? null}
-				workspaceRemote={workspaceRemote ?? null}
-				sectionRef={actionsRef}
-				bodyHeight={actionsHeight}
-				expanded={!tabsOpen}
-				onCommitAction={onCommitAction}
-				currentSessionId={currentSessionId ?? null}
-				onQueuePendingPromptForSession={onQueuePendingPromptForSession}
-				commitButtonMode={commitButtonMode}
-				commitButtonState={commitButtonState}
-				changeRequest={changeRequest ?? null}
-			/>
-
-			{tabsOpen && (
-				<HorizontalResizeHandle
-					onMouseDown={handleResizeStart("tabs")}
-					isActive={isTabsResizing}
-				/>
-			)}
-
-			<InspectorTabsSection
-				wrapperRef={tabsWrapperRef}
-				open={tabsOpen}
-				onToggle={handleToggleTabs}
-				activeTab={activeTab}
-				onTabChange={setActiveTab}
-				tabActions={runTabActions}
-				setupScriptState={setupScriptState}
-				runScriptState={runScriptState}
-				terminalInstances={terminalInstances}
-				onAddTerminal={handleAddTerminal}
-				onCloseTerminal={handleCloseTerminal}
-				canSpawnTerminal={canSpawnTerminal}
-				canHoverExpand={canHoverExpand}
+			<div
+				className="min-w-0 flex-1 overflow-hidden"
+				onTouchStart={handleTouchStart}
+				onTouchEnd={handleTouchEnd}
 			>
-				<SetupTab
-					repoId={repoId ?? null}
-					workspaceId={workspaceId ?? null}
-					setupScript={repoScripts?.setupScript ?? null}
-					isActive={activeTab === "setup"}
-					onOpenSettings={handleOpenSettings}
-				/>
-				<RunTab
-					repoId={repoId ?? null}
-					workspaceId={workspaceId ?? null}
-					runScript={repoScripts?.runScript ?? null}
-					isActive={activeTab === "run"}
-					onOpenSettings={handleOpenSettings}
-					onStatusChange={setRunStatus}
-					onUrlsChange={setRunUrls}
-				/>
-				{terminalInstances.map((instance) => (
-					<TerminalInstancePanel
-						key={instance.id}
-						repoId={repoId ?? null}
-						workspaceId={workspaceId ?? null}
-						instance={instance}
-						isActive={activeTab === instance.id}
-					/>
-				))}
-			</InspectorTabsSection>
+				<div
+					className="flex h-full w-[200%] transition-transform duration-300 ease-out"
+					style={{
+						transform:
+							sidebarView === "files" ? "translateX(-50%)" : "translateX(0)",
+					}}
+				>
+					<div
+						aria-hidden={sidebarView !== "activity"}
+						className={cn(
+							"h-full w-1/2 shrink-0 overflow-hidden",
+							sidebarView !== "activity" && "pointer-events-none",
+						)}
+						inert={sidebarView !== "activity" ? true : undefined}
+					>
+						<div
+							ref={containerRef}
+							className={cn(
+								"flex h-full min-h-0 flex-col bg-sidebar",
+								isResizing && "select-none",
+							)}
+						>
+							<ChangesSection
+								bodyHeight={changesHeight}
+								workspaceId={workspaceId ?? null}
+								workspaceRootPath={workspaceRootPath ?? null}
+								workspaceTargetBranch={workspaceTargetBranch ?? null}
+								changes={changes}
+								editorMode={editorMode}
+								activeEditorPath={activeEditorPath}
+								onOpenEditorFile={onOpenEditorFile}
+								flashingPaths={flashingPaths}
+								onCommitAction={onCommitAction}
+								commitButtonMode={commitButtonMode}
+								commitButtonState={commitButtonState}
+								changeRequest={changeRequest ?? null}
+								forgeIsRefreshing={forgeIsRefreshing}
+							/>
+
+							<HorizontalResizeHandle
+								onMouseDown={handleResizeStart("actions")}
+								isActive={isActionsResizing}
+							/>
+
+							<ActionsSection
+								workspaceId={workspaceId ?? null}
+								workspaceState={workspaceState ?? null}
+								repoId={repoId ?? null}
+								workspaceRemote={workspaceRemote ?? null}
+								sectionRef={actionsRef}
+								bodyHeight={actionsHeight}
+								expanded={!tabsOpen}
+								onCommitAction={onCommitAction}
+								currentSessionId={currentSessionId ?? null}
+								onQueuePendingPromptForSession={onQueuePendingPromptForSession}
+								commitButtonMode={commitButtonMode}
+								commitButtonState={commitButtonState}
+								changeRequest={changeRequest ?? null}
+							/>
+
+							{tabsOpen && (
+								<HorizontalResizeHandle
+									onMouseDown={handleResizeStart("tabs")}
+									isActive={isTabsResizing}
+								/>
+							)}
+
+							<InspectorTabsSection
+								wrapperRef={tabsWrapperRef}
+								open={tabsOpen}
+								onToggle={handleToggleTabs}
+								activeTab={activeTab}
+								onTabChange={setActiveTab}
+								tabActions={runTabActions}
+								setupScriptState={setupScriptState}
+								runScriptState={runScriptState}
+								terminalInstances={terminalInstances}
+								onAddTerminal={handleAddTerminal}
+								onCloseTerminal={handleCloseTerminal}
+								canSpawnTerminal={canSpawnTerminal}
+								canHoverExpand={canHoverExpand}
+							>
+								<SetupTab
+									repoId={repoId ?? null}
+									workspaceId={workspaceId ?? null}
+									setupScript={repoScripts?.setupScript ?? null}
+									isActive={activeTab === "setup"}
+									onOpenSettings={handleOpenSettings}
+								/>
+								<RunTab
+									repoId={repoId ?? null}
+									workspaceId={workspaceId ?? null}
+									runScript={repoScripts?.runScript ?? null}
+									isActive={activeTab === "run"}
+									onOpenSettings={handleOpenSettings}
+									onStatusChange={setRunStatus}
+									onUrlsChange={setRunUrls}
+								/>
+								{terminalInstances.map((instance) => (
+									<TerminalInstancePanel
+										key={instance.id}
+										repoId={repoId ?? null}
+										workspaceId={workspaceId ?? null}
+										instance={instance}
+										isActive={activeTab === instance.id}
+									/>
+								))}
+							</InspectorTabsSection>
+						</div>
+					</div>
+					<div
+						aria-hidden={sidebarView !== "files"}
+						className={cn(
+							"h-full w-1/2 shrink-0 overflow-hidden",
+							sidebarView !== "files" && "pointer-events-none",
+						)}
+						inert={sidebarView !== "files" ? true : undefined}
+					>
+						<WorkspaceFilesView
+							active={sidebarView === "files"}
+							workspaceRootPath={workspaceRootPath ?? null}
+							activeEditorPath={activeEditorPath}
+							onOpenWorkspaceFile={onOpenWorkspaceFile}
+						/>
+					</div>
+				</div>
+			</div>
 		</div>
+	);
+}
+
+type InspectorSidebarView = "activity" | "files";
+
+const INSPECTOR_VIEW_SWIPE_DISTANCE = 48;
+
+function InspectorViewRail({
+	activeView,
+	onViewChange,
+}: {
+	activeView: InspectorSidebarView;
+	onViewChange: (view: InspectorSidebarView) => void;
+}) {
+	return (
+		<nav
+			aria-label="Inspector views"
+			className="flex w-9 shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-muted/20 py-2"
+		>
+			<InspectorViewButton
+				label="Activity view"
+				active={activeView === "activity"}
+				onClick={() => onViewChange("activity")}
+			>
+				<GitBranch className="size-4" strokeWidth={1.8} />
+			</InspectorViewButton>
+			<InspectorViewButton
+				label="Files view"
+				active={activeView === "files"}
+				onClick={() => onViewChange("files")}
+			>
+				<Files className="size-4" strokeWidth={1.8} />
+			</InspectorViewButton>
+		</nav>
+	);
+}
+
+function InspectorViewButton({
+	label,
+	active,
+	onClick,
+	children,
+}: {
+	label: string;
+	active: boolean;
+	onClick: () => void;
+	children: ReactNode;
+}) {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<Button
+					type="button"
+					aria-label={label}
+					aria-pressed={active}
+					variant="ghost"
+					size="icon-sm"
+					className={cn(
+						"relative size-7 text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+						active && "bg-accent text-foreground",
+					)}
+					onClick={onClick}
+				>
+					{children}
+				</Button>
+			</TooltipTrigger>
+			<TooltipContent
+				side="left"
+				className="flex h-[24px] items-center rounded-md px-2 text-[12px] leading-none"
+			>
+				{label.replace(" view", "")}
+			</TooltipContent>
+		</Tooltip>
 	);
 }

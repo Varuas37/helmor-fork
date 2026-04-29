@@ -2630,6 +2630,7 @@ function AppShell({
 													editorMode={workspaceViewMode === "editor"}
 													activeEditorPath={editorSession?.path ?? null}
 													onOpenEditorFile={handleOpenEditorFile}
+													onOpenWorkspaceFile={handleOpenFileReference}
 													onCommitAction={handleInspectorCommitAction}
 													currentSessionId={displayedSessionId}
 													onQueuePendingPromptForSession={

@@ -92,6 +92,8 @@ export async function createFileEditor(options: {
 	content: string;
 	line?: number;
 	column?: number;
+	readOnly?: boolean;
+	compact?: boolean;
 }): Promise<FileEditorController> {
 	const runtime = await ensureRuntime();
 	const { monaco } = runtime;
@@ -108,14 +110,18 @@ export async function createFileEditor(options: {
 	const editor = monaco.editor.create(options.container, {
 		automaticLayout: true,
 		bracketPairColorization: { enabled: true },
+		domReadOnly: Boolean(options.readOnly),
 		fontFamily:
 			'"SF Mono","Monaco","Cascadia Mono","Roboto Mono","Menlo",monospace',
 		fontLigatures: true,
-		fontSize: 13,
-		lineHeight: 21,
+		fontSize: options.compact ? 12 : 13,
+		lineHeight: options.compact ? 19 : 21,
 		minimap: { enabled: false },
 		model,
-		padding: { top: 14, bottom: 24 },
+		padding: options.compact
+			? { top: 10, bottom: 18 }
+			: { top: 14, bottom: 24 },
+		readOnly: Boolean(options.readOnly),
 		renderValidationDecorations: "editable",
 		scrollBeyondLastLine: false,
 		smoothScrolling: true,
