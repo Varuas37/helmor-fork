@@ -6,6 +6,7 @@ import {
 	InspectorTabsSection,
 	TABS_BLUR_HOLD_UNTIL_MS,
 	TABS_HOVER_ACTIVATION_MS,
+	TABS_HOVER_TRANSITION_MS,
 	TABS_HOVER_ZOOM_MULTIPLIER,
 } from "./layout";
 
@@ -122,5 +123,53 @@ describe("InspectorTabsSection", () => {
 		expect(zoomContainer.firstElementChild?.firstElementChild).toHaveStyle({
 			filter: "blur(6px)",
 		});
+	});
+
+	it("publishes zoom presentation while the terminal panel is expanded and collapsing", () => {
+		vi.useFakeTimers();
+		const onZoomPresentationChange = vi.fn();
+
+		renderWithProviders(
+			<InspectorTabsSection
+				wrapperRef={createRef<HTMLDivElement>()}
+				open
+				onToggle={vi.fn()}
+				activeTab="run"
+				onTabChange={vi.fn()}
+				setupScriptState="idle"
+				runScriptState="running"
+				terminalInstances={[]}
+				onAddTerminal={vi.fn()}
+				onCloseTerminal={vi.fn()}
+				canSpawnTerminal={false}
+				canHoverExpand
+				onZoomPresentationChange={onZoomPresentationChange}
+			>
+				<div>Terminal body</div>
+			</InspectorTabsSection>,
+		);
+
+		const tabsBody = screen.getByLabelText("Inspector tabs body");
+		const zoomContainer = screen.getByLabelText("Inspector section Tabs")
+			.parentElement as HTMLElement;
+
+		expect(onZoomPresentationChange).toHaveBeenLastCalledWith(false);
+
+		fireEvent.mouseEnter(tabsBody);
+		act(() => {
+			vi.advanceTimersByTime(TABS_HOVER_ACTIVATION_MS);
+		});
+
+		expect(onZoomPresentationChange).toHaveBeenLastCalledWith(true);
+
+		fireEvent.mouseLeave(zoomContainer);
+
+		expect(onZoomPresentationChange).toHaveBeenLastCalledWith(true);
+
+		act(() => {
+			vi.advanceTimersByTime(TABS_HOVER_TRANSITION_MS + 20);
+		});
+
+		expect(onZoomPresentationChange).toHaveBeenLastCalledWith(false);
 	});
 });

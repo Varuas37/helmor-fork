@@ -139,6 +139,7 @@ import {
 } from "./lib/settings";
 import { flushSidebarListsIfIdle } from "./lib/sidebar-mutation-gate";
 import { useOsNotifications } from "./lib/use-os-notifications";
+import { cn } from "./lib/utils";
 import {
 	recomputeWorkspaceDetailUnread,
 	recomputeWorkspaceUnreadInGroups,
@@ -477,6 +478,7 @@ function AppShell({
 		setSidebarCollapsed,
 	} = useShellPanels();
 	const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
+	const [inspectorTabsZoomed, setInspectorTabsZoomed] = useState(false);
 	const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
 		null,
 	);
@@ -2857,7 +2859,12 @@ function AppShell({
 
 											<aside
 												aria-label="Inspector sidebar"
-												className="relative h-full shrink-0 overflow-hidden bg-sidebar has-[[data-tabs-zoomed=true]]:overflow-visible"
+												className={cn(
+													"relative h-full shrink-0 bg-sidebar",
+													inspectorTabsZoomed
+														? "overflow-visible"
+														: "overflow-hidden",
+												)}
 												style={{ width: `${inspectorWidth}px` }}
 											>
 												<WorkspaceInspectorSidebar
@@ -2894,6 +2901,7 @@ function AppShell({
 													onQueuePendingPromptForSession={
 														queuePendingPromptForSession
 													}
+													onTabsZoomedChange={setInspectorTabsZoomed}
 													commitButtonMode={commitButtonMode}
 													commitButtonState={commitButtonState}
 													changeRequest={workspaceChangeRequest}

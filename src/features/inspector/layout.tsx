@@ -123,6 +123,8 @@ type InspectorTabsSectionProps = {
 	 * enlarging (and not on the empty "Run setup" / "Open settings" placeholders).
 	 */
 	canHoverExpand: boolean;
+	/** Publishes zoom presentation so ancestor panes can release overflow clips. */
+	onZoomPresentationChange?: (zoomed: boolean) => void;
 	children?: React.ReactNode;
 };
 
@@ -140,6 +142,7 @@ export function InspectorTabsSection({
 	onCloseTerminal,
 	canSpawnTerminal,
 	canHoverExpand,
+	onZoomPresentationChange,
 	children,
 }: InspectorTabsSectionProps) {
 	const { settings } = useSettings();
@@ -364,6 +367,16 @@ export function InspectorTabsSection({
 		clearBlurTimer,
 		releaseTerminalFitLock,
 	]);
+
+	useEffect(() => {
+		onZoomPresentationChange?.(isZoomPresented);
+	}, [isZoomPresented, onZoomPresentationChange]);
+
+	useEffect(() => {
+		return () => {
+			onZoomPresentationChange?.(false);
+		};
+	}, [onZoomPresentationChange]);
 
 	const zoomedSize = `${TABS_HOVER_ZOOM_MULTIPLIER * 100}%`;
 

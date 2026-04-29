@@ -78,6 +78,7 @@ type WorkspaceInspectorSidebarProps = {
 	 */
 	forgeIsRefreshing?: boolean;
 	onOpenSettings?: () => void;
+	onTabsZoomedChange?: (zoomed: boolean) => void;
 };
 
 export function WorkspaceInspectorSidebar({
@@ -101,6 +102,7 @@ export function WorkspaceInspectorSidebar({
 	changeRequest,
 	forgeIsRefreshing = false,
 	onOpenSettings,
+	onTabsZoomedChange,
 }: WorkspaceInspectorSidebarProps) {
 	const {
 		actionsHeight,
@@ -127,6 +129,7 @@ export function WorkspaceInspectorSidebar({
 	});
 	const [sidebarView, setSidebarView] =
 		useState<InspectorSidebarView>("activity");
+	const [tabsZoomPresented, setTabsZoomPresented] = useState(false);
 	const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
 	// Fire setup auto-run / auto-complete at the sidebar level so it runs even
@@ -377,6 +380,13 @@ export function WorkspaceInspectorSidebar({
 			scriptTabState === "failure";
 
 	const handleOpenSettings = onOpenSettings ?? (() => {});
+	const handleTabsZoomPresentationChange = useCallback(
+		(zoomed: boolean) => {
+			setTabsZoomPresented(zoomed);
+			onTabsZoomedChange?.(zoomed);
+		},
+		[onTabsZoomedChange],
+	);
 
 	const handleTouchStart = useCallback((event: TouchEvent<HTMLDivElement>) => {
 		const touch = event.touches[0];
@@ -405,7 +415,10 @@ export function WorkspaceInspectorSidebar({
 				onViewChange={setSidebarView}
 			/>
 			<div
-				className="min-w-0 flex-1 overflow-hidden"
+				className={cn(
+					"min-w-0 flex-1",
+					tabsZoomPresented ? "overflow-visible" : "overflow-hidden",
+				)}
 				onTouchStart={handleTouchStart}
 				onTouchEnd={handleTouchEnd}
 			>
@@ -419,7 +432,8 @@ export function WorkspaceInspectorSidebar({
 					<div
 						aria-hidden={sidebarView !== "activity"}
 						className={cn(
-							"h-full w-1/2 shrink-0 overflow-hidden",
+							"h-full w-1/2 shrink-0",
+							tabsZoomPresented ? "overflow-visible" : "overflow-hidden",
 							sidebarView !== "activity" && "pointer-events-none",
 						)}
 						inert={sidebarView !== "activity" ? true : undefined}
@@ -492,6 +506,7 @@ export function WorkspaceInspectorSidebar({
 								onCloseTerminal={handleCloseTerminal}
 								canSpawnTerminal={canSpawnTerminal}
 								canHoverExpand={canHoverExpand}
+								onZoomPresentationChange={handleTabsZoomPresentationChange}
 							>
 								<SetupTab
 									repoId={repoId ?? null}
