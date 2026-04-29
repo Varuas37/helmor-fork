@@ -1,42 +1,50 @@
 import {
-	CheckIcon,
 	MessageSquareIcon,
-	MessageSquarePlusIcon,
+	PencilIcon,
+	ReplyIcon,
 	Trash2Icon,
-	XIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import type { DiffLineAnchor, DiffLineTarget } from "@/lib/monaco-runtime";
-import type { DiffComment } from "./diff-comment-storage";
-
-export type DiffCommentDraft = DiffLineTarget & {
-	body: string;
-};
+import type { DiffLineAnchor } from "@/lib/monaco-runtime";
+import {
+	DiffCommentForm,
+	DiffCommentMarkdown,
+	DiffCommentReplyItem,
+} from "./diff-comment-parts";
+import type { DiffComment, DiffCommentReply } from "./diff-comment-storage";
+import {
+	type DiffCommentComposer,
+	formatLineLabel,
+	getDiffLineKey,
+} from "./diff-comment-types";
 
 type DiffCommentLayerProps = {
 	comments: DiffComment[];
-	draft: DiffCommentDraft | null;
+	composer: DiffCommentComposer | null;
 	anchors: Record<string, DiffLineAnchor>;
-	onCancelDraft: () => void;
-	onChangeDraft: (body: string) => void;
+	onCancelComposer: () => void;
+	onChangeComposer: (body: string) => void;
 	onDeleteComment: (id: string) => void;
-	onSaveDraft: () => void;
+	onDeleteReply: (commentId: string, replyId: string) => void;
+	onEditComment: (comment: DiffComment) => void;
+	onEditReply: (comment: DiffComment, reply: DiffCommentReply) => void;
+	onReply: (comment: DiffComment) => void;
+	onSubmitComposer: () => void;
 };
-
-export function getDiffLineKey(target: DiffLineTarget): string {
-	return `${target.side}:${target.lineNumber}`;
-}
 
 export function DiffCommentLayer({
 	comments,
-	draft,
+	composer,
 	anchors,
-	onCancelDraft,
-	onChangeDraft,
+	onCancelComposer,
+	onChangeComposer,
 	onDeleteComment,
-	onSaveDraft,
+	onDeleteReply,
+	onEditComment,
+	onEditReply,
+	onReply,
+	onSubmitComposer,
 }: DiffCommentLayerProps) {
 	const groupedComments = useMemo(
 		() => groupCommentsByLine(comments),
@@ -44,11 +52,11 @@ export function DiffCommentLayer({
 	);
 	const visibleLines = useMemo(() => {
 		const keys = new Set<string>(Object.keys(groupedComments));
-		if (draft) {
-			keys.add(getDiffLineKey(draft));
+		if (composer) {
+			keys.add(getDiffLineKey(composer));
 		}
 		return [...keys];
-	}, [draft, groupedComments]);
+	}, [composer, groupedComments]);
 
 	if (visibleLines.length === 0) {
 		return null;
@@ -63,8 +71,8 @@ export function DiffCommentLayer({
 				}
 
 				const lineComments = groupedComments[lineKey] ?? [];
-				const draftForLine =
-					draft && getDiffLineKey(draft) === lineKey ? draft : null;
+				const composerForLine =
+					composer && getDiffLineKey(composer) === lineKey ? composer : null;
 
 				return (
 					<div
@@ -83,15 +91,25 @@ export function DiffCommentLayer({
 								<SavedDiffComment
 									key={comment.id}
 									comment={comment}
-									onDelete={() => onDeleteComment(comment.id)}
+									composer={composerForLine}
+									onCancelComposer={onCancelComposer}
+									onChangeComposer={onChangeComposer}
+									onDeleteComment={() => onDeleteComment(comment.id)}
+									onDeleteReply={(replyId) =>
+										onDeleteReply(comment.id, replyId)
+									}
+									onEditComment={() => onEditComment(comment)}
+									onEditReply={(reply) => onEditReply(comment, reply)}
+									onReply={() => onReply(comment)}
+									onSubmitComposer={onSubmitComposer}
 								/>
 							))}
-							{draftForLine && (
-								<DiffCommentDraftForm
-									draft={draftForLine}
-									onCancel={onCancelDraft}
-									onChange={onChangeDraft}
-									onSave={onSaveDraft}
+							{composerForLine?.kind === "new" && (
+								<DiffCommentForm
+									composer={composerForLine}
+									onCancel={onCancelComposer}
+									onChange={onChangeComposer}
+									onSave={onSubmitComposer}
 								/>
 							)}
 						</div>
@@ -104,11 +122,36 @@ export function DiffCommentLayer({
 
 function SavedDiffComment({
 	comment,
-	onDelete,
+	composer,
+	onCancelComposer,
+	onChangeComposer,
+	onDeleteComment,
+	onDeleteReply,
+	onEditComment,
+	onEditReply,
+	onReply,
+	onSubmitComposer,
 }: {
 	comment: DiffComment;
-	onDelete: () => void;
+	composer: DiffCommentComposer | null;
+	onCancelComposer: () => void;
+	onChangeComposer: (body: string) => void;
+	onDeleteComment: () => void;
+	onDeleteReply: (replyId: string) => void;
+	onEditComment: () => void;
+	onEditReply: (reply: DiffCommentReply) => void;
+	onReply: () => void;
+	onSubmitComposer: () => void;
 }) {
+	const editRootComposer =
+		composer?.kind === "edit-comment" && composer.commentId === comment.id
+			? composer
+			: null;
+	const replyComposer =
+		composer?.kind === "reply" && composer.commentId === comment.id
+			? composer
+			: null;
+
 	return (
 		<div className="rounded-md border border-border/80 bg-popover/95 text-popover-foreground shadow-lg backdrop-blur">
 			<div className="flex items-center gap-1.5 border-b border-border/60 px-2 py-1 text-[10.5px] text-muted-foreground">
@@ -120,98 +163,91 @@ function SavedDiffComment({
 					type="button"
 					variant="ghost"
 					size="icon-xs"
+					aria-label="Edit comment"
+					onClick={onEditComment}
+					className="size-5 text-muted-foreground hover:text-foreground"
+				>
+					<PencilIcon className="size-3" strokeWidth={1.8} />
+				</Button>
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon-xs"
 					aria-label="Delete comment"
-					onClick={onDelete}
+					onClick={onDeleteComment}
 					className="size-5 text-muted-foreground hover:text-foreground"
 				>
 					<Trash2Icon className="size-3" strokeWidth={1.8} />
 				</Button>
 			</div>
-			<p className="whitespace-pre-wrap px-2 py-1.5 text-[12px] leading-5 text-foreground">
-				{comment.body}
-			</p>
+
+			<div className="px-2 py-1.5">
+				{editRootComposer ? (
+					<DiffCommentForm
+						composer={editRootComposer}
+						onCancel={onCancelComposer}
+						onChange={onChangeComposer}
+						onSave={onSubmitComposer}
+					/>
+				) : (
+					<DiffCommentMarkdown body={comment.body} />
+				)}
+			</div>
+
+			{comment.replies.length > 0 && (
+				<div className="border-t border-border/50">
+					{comment.replies.map((reply) => {
+						const editReplyComposer =
+							composer?.kind === "edit-reply" &&
+							composer.commentId === comment.id &&
+							composer.replyId === reply.id
+								? composer
+								: null;
+
+						return (
+							<DiffCommentReplyItem
+								key={reply.id}
+								reply={reply}
+								editComposer={editReplyComposer}
+								onCancelComposer={onCancelComposer}
+								onChangeComposer={onChangeComposer}
+								onDeleteReply={() => onDeleteReply(reply.id)}
+								onEditReply={() => onEditReply(reply)}
+								onSubmitComposer={onSubmitComposer}
+							/>
+						);
+					})}
+				</div>
+			)}
+
+			{replyComposer ? (
+				<div className="border-t border-border/50 p-2">
+					<DiffCommentForm
+						composer={replyComposer}
+						onCancel={onCancelComposer}
+						onChange={onChangeComposer}
+						onSave={onSubmitComposer}
+					/>
+				</div>
+			) : (
+				<div className="flex justify-end border-t border-border/50 px-2 py-1">
+					<Button
+						type="button"
+						variant="ghost"
+						size="xs"
+						onClick={onReply}
+						className="text-muted-foreground"
+					>
+						<ReplyIcon
+							data-icon="inline-start"
+							className="size-3"
+							strokeWidth={1.8}
+						/>
+						Reply
+					</Button>
+				</div>
+			)}
 		</div>
-	);
-}
-
-function DiffCommentDraftForm({
-	draft,
-	onCancel,
-	onChange,
-	onSave,
-}: {
-	draft: DiffCommentDraft;
-	onCancel: () => void;
-	onChange: (body: string) => void;
-	onSave: () => void;
-}) {
-	const textareaRef = useRef<HTMLTextAreaElement>(null);
-	const canSave = draft.body.trim().length > 0;
-
-	useEffect(() => {
-		textareaRef.current?.focus();
-	}, []);
-
-	return (
-		<form
-			className="rounded-md border border-primary/40 bg-popover/95 p-2 text-popover-foreground shadow-xl backdrop-blur"
-			onSubmit={(event) => {
-				event.preventDefault();
-				if (canSave) {
-					onSave();
-				}
-			}}
-		>
-			<div className="mb-1.5 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
-				<MessageSquarePlusIcon className="size-3" strokeWidth={1.8} />
-				<span>{formatLineLabel(draft)}</span>
-			</div>
-			<Textarea
-				ref={textareaRef}
-				aria-label="Diff comment"
-				value={draft.body}
-				placeholder="Add a comment..."
-				onChange={(event) => onChange(event.target.value)}
-				onKeyDown={(event) => {
-					if (event.key === "Escape") {
-						event.preventDefault();
-						onCancel();
-						return;
-					}
-					if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-						event.preventDefault();
-						if (canSave) {
-							onSave();
-						}
-					}
-				}}
-				className="min-h-20 resize-none rounded-md bg-background/80 px-2 py-1.5 font-sans text-[12px] leading-5 md:text-[12px]"
-			/>
-			<div className="mt-2 flex justify-end gap-1">
-				<Button
-					type="button"
-					variant="ghost"
-					size="xs"
-					onClick={onCancel}
-					className="text-muted-foreground"
-				>
-					<XIcon
-						data-icon="inline-start"
-						className="size-3"
-						strokeWidth={1.8}
-					/>
-					Cancel
-				</Button>
-				<Button type="submit" size="xs" disabled={!canSave}>
-					<CheckIcon
-						data-icon="inline-start"
-						className="size-3"
-						strokeWidth={1.8}
-					/>
-					Save
-				</Button>
-			</div>
-		</form>
 	);
 }
 
@@ -221,9 +257,4 @@ function groupCommentsByLine(comments: DiffComment[]) {
 		groups[key] = [...(groups[key] ?? []), comment];
 		return groups;
 	}, {});
-}
-
-function formatLineLabel(target: DiffLineTarget) {
-	const sideLabel = target.side === "original" ? "Original" : "Modified";
-	return `${sideLabel} line ${target.lineNumber}`;
 }

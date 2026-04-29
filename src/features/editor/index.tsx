@@ -13,23 +13,34 @@ import { Button } from "@/components/ui/button";
 import { ShortcutDisplay } from "@/features/shortcuts/shortcut-display";
 import type { EditorSessionState } from "@/lib/editor-session";
 import type { DiffLineAnchor, DiffLineTarget } from "@/lib/monaco-runtime";
+import { useSettings } from "@/lib/settings";
 import { describeUnknownError } from "@/lib/workspace-helpers";
+import { startDiffCommentAiReply } from "./diff-comment-agent";
+import { containsHelmorMention } from "./diff-comment-ai";
 import {
 	createDiffCommentId,
 	type DiffComment,
 	type DiffCommentScope,
+	getDiffCommentStorageKey,
 	loadDiffComments,
 	saveDiffComments,
 	sortDiffComments,
 } from "./diff-comment-storage";
+import { type DiffCommentComposer, getDiffLineKey } from "./diff-comment-types";
 import {
-	type DiffCommentDraft,
-	DiffCommentLayer,
-	getDiffLineKey,
-} from "./diff-comments";
+	addDiffCommentReply,
+	deleteDiffCommentReply,
+	findDiffComment,
+	findDiffCommentReply,
+	hasDiffCommentOnLine,
+	updateDiffCommentBody,
+	updateDiffCommentReply,
+} from "./diff-comment-updates";
+import { DiffCommentLayer } from "./diff-comments";
 
 type WorkspaceEditorSurfaceProps = {
 	editorSession: EditorSessionState;
+	workspaceId?: string | null;
 	workspaceRootPath?: string | null;
 	onChangeSession: (session: EditorSessionState) => void;
 	onExit: () => void;
@@ -51,11 +62,13 @@ type DiffController = Awaited<
 
 export function WorkspaceEditorSurface({
 	editorSession,
+	workspaceId,
 	workspaceRootPath,
 	onChangeSession,
 	onExit,
 	onError,
 }: WorkspaceEditorSurfaceProps) {
+	const { settings } = useSettings();
 	const editorHostRef = useRef<HTMLDivElement>(null);
 	const fileControllerRef = useRef<FileController | null>(null);
 	const diffControllerRef = useRef<DiffController | null>(null);
@@ -66,19 +79,22 @@ export function WorkspaceEditorSurface({
 	const applyValueRef = useRef(false);
 	const buildRequestIdRef = useRef(0);
 	const diffCommentTargetsRef = useRef<DiffLineTarget[]>([]);
+	const diffCommentScopeRef = useRef<DiffCommentScope | null>(null);
+	const diffCommentsRef = useRef<DiffComment[]>([]);
 	const [surfaceStatus, setSurfaceStatus] = useState<SurfaceStatus>({
 		kind: "ready",
 	});
 	const [diffControllerVersion, setDiffControllerVersion] = useState(0);
 	const [diffComments, setDiffComments] = useState<DiffComment[]>([]);
-	const [diffCommentDraft, setDiffCommentDraft] =
-		useState<DiffCommentDraft | null>(null);
+	const [diffCommentComposer, setDiffCommentComposer] =
+		useState<DiffCommentComposer | null>(null);
 	const [diffCommentAnchors, setDiffCommentAnchors] = useState<
 		Record<string, DiffLineAnchor>
 	>({});
 	latestSessionRef.current = editorSession;
 	onChangeSessionRef.current = onChangeSession;
 	onErrorRef.current = onError;
+	diffCommentsRef.current = diffComments;
 
 	const canRenderFile =
 		editorSession.kind === "file" &&
@@ -128,45 +144,195 @@ export function WorkspaceEditorSurface({
 		setDiffCommentAnchors(nextAnchors);
 	}, []);
 
-	const persistDiffComments = useCallback(
-		(nextComments: DiffComment[]) => {
-			const sortedComments = sortDiffComments(nextComments);
-			setDiffComments(sortedComments);
-			if (diffCommentScope) {
-				saveDiffComments(diffCommentScope, sortedComments);
+	const applyDiffCommentUpdate = useCallback(
+		(
+			scope: DiffCommentScope,
+			updater: (comments: DiffComment[]) => DiffComment[],
+		) => {
+			const scopeKey = getDiffCommentStorageKey(scope);
+			const visibleScope = diffCommentScopeRef.current;
+			const isVisibleScope =
+				visibleScope !== null &&
+				getDiffCommentStorageKey(visibleScope) === scopeKey;
+			const baseComments = isVisibleScope
+				? diffCommentsRef.current
+				: loadDiffComments(scope);
+			const sortedComments = sortDiffComments(updater(baseComments));
+			saveDiffComments(scope, sortedComments);
+
+			if (isVisibleScope) {
+				diffCommentsRef.current = sortedComments;
+				setDiffComments(sortedComments);
 			}
+
+			return sortedComments;
 		},
-		[diffCommentScope],
+		[],
+	);
+
+	const invokeHelmorFromComment = useCallback(
+		(scope: DiffCommentScope, thread: DiffComment, sourceBody: string) => {
+			void startDiffCommentAiReply({
+				scope,
+				thread,
+				target: {
+					side: thread.side,
+					lineNumber: thread.lineNumber,
+				},
+				sourceBody,
+				path: latestSessionRef.current.path,
+				workspaceId,
+				workspaceRootPath,
+				originalRef:
+					latestSessionRef.current.kind === "diff"
+						? (latestSessionRef.current.originalRef ?? null)
+						: null,
+				modifiedRef:
+					latestSessionRef.current.kind === "diff"
+						? (latestSessionRef.current.modifiedRef ?? null)
+						: null,
+				originalText:
+					latestSessionRef.current.kind === "diff"
+						? latestSessionRef.current.originalText
+						: undefined,
+				modifiedText:
+					latestSessionRef.current.kind === "diff"
+						? latestSessionRef.current.modifiedText
+						: undefined,
+				settings,
+				applyUpdate: applyDiffCommentUpdate,
+			});
+		},
+		[applyDiffCommentUpdate, settings, workspaceId, workspaceRootPath],
 	);
 
 	const handleSaveDiffComment = useCallback(() => {
-		if (!diffCommentDraft) {
+		if (!diffCommentComposer || !diffCommentScope) {
 			return;
 		}
 
-		const body = diffCommentDraft.body.trim();
+		const body = diffCommentComposer.body.trim();
 		if (!body) {
 			return;
 		}
 
-		persistDiffComments([
-			...diffComments,
-			{
-				id: createDiffCommentId(),
-				side: diffCommentDraft.side,
-				lineNumber: diffCommentDraft.lineNumber,
-				body,
-				createdAt: new Date().toISOString(),
+		const now = new Date().toISOString();
+		let targetThread: DiffComment | null = null;
+		let shouldInvokeHelmor = false;
+
+		const nextComments = applyDiffCommentUpdate(
+			diffCommentScope,
+			(comments) => {
+				if (diffCommentComposer.kind === "new") {
+					const comment: DiffComment = {
+						id: createDiffCommentId(),
+						side: diffCommentComposer.side,
+						lineNumber: diffCommentComposer.lineNumber,
+						body,
+						createdAt: now,
+						replies: [],
+					};
+					targetThread = comment;
+					shouldInvokeHelmor = containsHelmorMention(body);
+					return [...comments, comment];
+				}
+
+				if (diffCommentComposer.kind === "reply") {
+					const reply = {
+						id: createDiffCommentId(),
+						author: "user" as const,
+						body,
+						createdAt: now,
+					};
+					const next = addDiffCommentReply(
+						comments,
+						diffCommentComposer.commentId,
+						reply,
+					);
+					targetThread = findDiffComment(next, diffCommentComposer.commentId);
+					shouldInvokeHelmor = containsHelmorMention(body);
+					return next;
+				}
+
+				if (diffCommentComposer.kind === "edit-comment") {
+					const existing = findDiffComment(
+						comments,
+						diffCommentComposer.commentId,
+					);
+					shouldInvokeHelmor =
+						containsHelmorMention(body) &&
+						!containsHelmorMention(existing?.body ?? "");
+					const next = updateDiffCommentBody(
+						comments,
+						diffCommentComposer.commentId,
+						body,
+						now,
+					);
+					targetThread = findDiffComment(next, diffCommentComposer.commentId);
+					return next;
+				}
+
+				const existingComment = findDiffComment(
+					comments,
+					diffCommentComposer.commentId,
+				);
+				const existingReply =
+					existingComment && diffCommentComposer.kind === "edit-reply"
+						? findDiffCommentReply(existingComment, diffCommentComposer.replyId)
+						: null;
+				shouldInvokeHelmor =
+					containsHelmorMention(body) &&
+					!containsHelmorMention(existingReply?.body ?? "");
+				const next = updateDiffCommentReply(
+					comments,
+					diffCommentComposer.commentId,
+					diffCommentComposer.replyId,
+					{ body, updatedAt: now },
+				);
+				targetThread = findDiffComment(next, diffCommentComposer.commentId);
+				return next;
 			},
-		]);
-		setDiffCommentDraft(null);
-	}, [diffCommentDraft, diffComments, persistDiffComments]);
+		);
+
+		setDiffCommentComposer(null);
+		window.requestAnimationFrame(updateDiffCommentAnchors);
+
+		if (shouldInvokeHelmor && targetThread) {
+			invokeHelmorFromComment(diffCommentScope, targetThread, body);
+			return;
+		}
+
+		diffCommentsRef.current = nextComments;
+	}, [
+		applyDiffCommentUpdate,
+		diffCommentComposer,
+		diffCommentScope,
+		invokeHelmorFromComment,
+		updateDiffCommentAnchors,
+	]);
 
 	const handleDeleteDiffComment = useCallback(
 		(id: string) => {
-			persistDiffComments(diffComments.filter((comment) => comment.id !== id));
+			if (!diffCommentScope) {
+				return;
+			}
+			applyDiffCommentUpdate(diffCommentScope, (comments) =>
+				comments.filter((comment) => comment.id !== id),
+			);
 		},
-		[diffComments, persistDiffComments],
+		[applyDiffCommentUpdate, diffCommentScope],
+	);
+
+	const handleDeleteDiffCommentReply = useCallback(
+		(commentId: string, replyId: string) => {
+			if (!diffCommentScope) {
+				return;
+			}
+			applyDiffCommentUpdate(diffCommentScope, (comments) =>
+				deleteDiffCommentReply(comments, commentId, replyId),
+			);
+		},
+		[applyDiffCommentUpdate, diffCommentScope],
 	);
 
 	useEffect(() => {
@@ -244,13 +410,18 @@ export function WorkspaceEditorSurface({
 	useEffect(() => {
 		if (!diffCommentScope) {
 			setDiffComments([]);
-			setDiffCommentDraft(null);
+			diffCommentsRef.current = [];
+			diffCommentScopeRef.current = null;
+			setDiffCommentComposer(null);
 			setDiffCommentAnchors({});
 			return;
 		}
 
-		setDiffComments(loadDiffComments(diffCommentScope));
-		setDiffCommentDraft(null);
+		const loadedComments = loadDiffComments(diffCommentScope);
+		diffCommentScopeRef.current = diffCommentScope;
+		diffCommentsRef.current = loadedComments;
+		setDiffComments(loadedComments);
+		setDiffCommentComposer(null);
 		setDiffCommentAnchors({});
 	}, [diffCommentScope]);
 
@@ -262,15 +433,15 @@ export function WorkspaceEditorSurface({
 				lineNumber: comment.lineNumber,
 			});
 		}
-		if (diffCommentDraft) {
-			targets.set(getDiffLineKey(diffCommentDraft), {
-				side: diffCommentDraft.side,
-				lineNumber: diffCommentDraft.lineNumber,
+		if (diffCommentComposer) {
+			targets.set(getDiffLineKey(diffCommentComposer), {
+				side: diffCommentComposer.side,
+				lineNumber: diffCommentComposer.lineNumber,
 			});
 		}
 		diffCommentTargetsRef.current = [...targets.values()];
 		updateDiffCommentAnchors();
-	}, [diffCommentDraft, diffComments, updateDiffCommentAnchors]);
+	}, [diffCommentComposer, diffComments, updateDiffCommentAnchors]);
 
 	useEffect(() => {
 		if (editorSession.kind !== "diff" || !diffControllerRef.current) {
@@ -280,8 +451,13 @@ export function WorkspaceEditorSurface({
 		const controller = diffControllerRef.current;
 		const clickSubscription = controller.onDidClickDiffLine((target) => {
 			controller.revealLine(target);
-			setDiffCommentDraft({
+			if (hasDiffCommentOnLine(diffCommentsRef.current, target)) {
+				window.requestAnimationFrame(updateDiffCommentAnchors);
+				return;
+			}
+			setDiffCommentComposer({
 				...target,
+				kind: "new",
 				body: "",
 			});
 			window.requestAnimationFrame(updateDiffCommentAnchors);
@@ -584,16 +760,45 @@ export function WorkspaceEditorSurface({
 				{editorSession.kind === "diff" && (
 					<DiffCommentLayer
 						comments={diffComments}
-						draft={diffCommentDraft}
+						composer={diffCommentComposer}
 						anchors={diffCommentAnchors}
-						onCancelDraft={() => setDiffCommentDraft(null)}
-						onChangeDraft={(body) =>
-							setDiffCommentDraft((current) =>
+						onCancelComposer={() => setDiffCommentComposer(null)}
+						onChangeComposer={(body) =>
+							setDiffCommentComposer((current) =>
 								current ? { ...current, body } : current,
 							)
 						}
 						onDeleteComment={handleDeleteDiffComment}
-						onSaveDraft={handleSaveDiffComment}
+						onDeleteReply={handleDeleteDiffCommentReply}
+						onEditComment={(comment) =>
+							setDiffCommentComposer({
+								side: comment.side,
+								lineNumber: comment.lineNumber,
+								kind: "edit-comment",
+								commentId: comment.id,
+								body: comment.body,
+							})
+						}
+						onEditReply={(comment, reply) =>
+							setDiffCommentComposer({
+								side: comment.side,
+								lineNumber: comment.lineNumber,
+								kind: "edit-reply",
+								commentId: comment.id,
+								replyId: reply.id,
+								body: reply.body,
+							})
+						}
+						onReply={(comment) =>
+							setDiffCommentComposer({
+								side: comment.side,
+								lineNumber: comment.lineNumber,
+								kind: "reply",
+								commentId: comment.id,
+								body: "",
+							})
+						}
+						onSubmitComposer={handleSaveDiffComment}
 					/>
 				)}
 			</div>

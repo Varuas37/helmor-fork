@@ -9,12 +9,29 @@ export type DiffCommentScope = {
 	modifiedRef?: string | null;
 };
 
+export type DiffCommentAuthor = "user" | "helmor";
+
+export type DiffCommentReplyStatus = "pending" | "streaming" | "done" | "error";
+
+export type DiffCommentReply = {
+	id: string;
+	author: DiffCommentAuthor;
+	body: string;
+	createdAt: string;
+	updatedAt?: string;
+	status?: DiffCommentReplyStatus;
+	errorMessage?: string;
+	helmorSessionId?: string | null;
+};
+
 export type DiffComment = {
 	id: string;
 	side: DiffLineSide;
 	lineNumber: number;
 	body: string;
 	createdAt: string;
+	updatedAt?: string;
+	replies: DiffCommentReply[];
 };
 
 export function getDiffCommentStorageKey(scope: DiffCommentScope): string {
@@ -52,7 +69,7 @@ export function loadDiffComments(scope: DiffCommentScope): DiffComment[] {
 			return [];
 		}
 
-		return sortDiffComments(parsed.filter(isDiffComment));
+		return sortDiffComments(parsed.flatMap(normalizeDiffComment));
 	} catch {
 		return [];
 	}
@@ -88,13 +105,15 @@ export function sortDiffComments(comments: DiffComment[]): DiffComment[] {
 	});
 }
 
-function isDiffComment(value: unknown): value is DiffComment {
+function normalizeDiffComment(value: unknown): DiffComment[] {
 	if (!value || typeof value !== "object") {
-		return false;
+		return [];
 	}
 
-	const candidate = value as Partial<DiffComment>;
-	return (
+	const candidate = value as Partial<DiffComment> & {
+		replies?: unknown;
+	};
+	if (
 		typeof candidate.id === "string" &&
 		(candidate.side === "original" || candidate.side === "modified") &&
 		typeof candidate.lineNumber === "number" &&
@@ -102,5 +121,75 @@ function isDiffComment(value: unknown): value is DiffComment {
 		candidate.lineNumber > 0 &&
 		typeof candidate.body === "string" &&
 		typeof candidate.createdAt === "string"
+	) {
+		return [
+			{
+				id: candidate.id,
+				side: candidate.side,
+				lineNumber: candidate.lineNumber,
+				body: candidate.body,
+				createdAt: candidate.createdAt,
+				updatedAt:
+					typeof candidate.updatedAt === "string"
+						? candidate.updatedAt
+						: undefined,
+				replies: Array.isArray(candidate.replies)
+					? candidate.replies.flatMap(normalizeDiffCommentReply)
+					: [],
+			},
+		];
+	}
+
+	return [];
+}
+
+function normalizeDiffCommentReply(value: unknown): DiffCommentReply[] {
+	if (!value || typeof value !== "object") {
+		return [];
+	}
+
+	const candidate = value as Partial<DiffCommentReply>;
+	if (
+		typeof candidate.id !== "string" ||
+		(candidate.author !== "user" && candidate.author !== "helmor") ||
+		typeof candidate.body !== "string" ||
+		typeof candidate.createdAt !== "string"
+	) {
+		return [];
+	}
+
+	return [
+		{
+			id: candidate.id,
+			author: candidate.author,
+			body: candidate.body,
+			createdAt: candidate.createdAt,
+			updatedAt:
+				typeof candidate.updatedAt === "string"
+					? candidate.updatedAt
+					: undefined,
+			status: isDiffCommentReplyStatus(candidate.status)
+				? candidate.status
+				: undefined,
+			errorMessage:
+				typeof candidate.errorMessage === "string"
+					? candidate.errorMessage
+					: undefined,
+			helmorSessionId:
+				typeof candidate.helmorSessionId === "string"
+					? candidate.helmorSessionId
+					: null,
+		},
+	];
+}
+
+function isDiffCommentReplyStatus(
+	value: unknown,
+): value is DiffCommentReplyStatus {
+	return (
+		value === "pending" ||
+		value === "streaming" ||
+		value === "done" ||
+		value === "error"
 	);
 }

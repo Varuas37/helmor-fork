@@ -1,6 +1,6 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { EditorSessionState } from "@/lib/editor-session";
@@ -8,7 +8,12 @@ import type { DiffLineTarget } from "@/lib/monaco-runtime";
 import { getDiffCommentStorageKey } from "./diff-comment-storage";
 
 const apiMocks = vi.hoisted(() => ({
+	createSession: vi.fn(),
+	hideSession: vi.fn(),
+	loadAgentModelSections: vi.fn(),
 	readEditorFile: vi.fn(),
+	renameSession: vi.fn(),
+	startAgentMessageStream: vi.fn(),
 }));
 
 const runtimeMocks = vi.hoisted(() => {
@@ -111,9 +116,21 @@ vi.mock("@/lib/api", async (importOriginal) => {
 
 	return {
 		...actual,
+		createSession: apiMocks.createSession,
+		hideSession: apiMocks.hideSession,
+		loadAgentModelSections: apiMocks.loadAgentModelSections,
 		readEditorFile: apiMocks.readEditorFile,
+		renameSession: apiMocks.renameSession,
+		startAgentMessageStream: apiMocks.startAgentMessageStream,
 	};
 });
+
+vi.mock("@/components/streamdown-loader", () => ({
+	LazyStreamdown: ({ children }: { children?: ReactNode }) => (
+		<div>{children}</div>
+	),
+	preloadStreamdown: vi.fn(),
+}));
 
 vi.mock("@/lib/monaco-runtime", () => ({
 	createDiffEditor: runtimeMocks.createDiffEditor,
@@ -137,6 +154,7 @@ function EditorSurfaceHarness({
 	return (
 		<WorkspaceEditorSurface
 			editorSession={session}
+			workspaceId="workspace-1"
 			workspaceRootPath="/tmp/helmor-workspace"
 			onChangeSession={(next) => {
 				onChangeSpy(next);
@@ -152,7 +170,58 @@ describe("WorkspaceEditorSurface", () => {
 	beforeEach(() => {
 		installLocalStorageMock();
 		runtimeMocks.reset();
+		apiMocks.createSession.mockReset();
+		apiMocks.hideSession.mockReset();
+		apiMocks.loadAgentModelSections.mockReset();
 		apiMocks.readEditorFile.mockReset();
+		apiMocks.renameSession.mockReset();
+		apiMocks.startAgentMessageStream.mockReset();
+		apiMocks.createSession.mockResolvedValue({ sessionId: "session-ai" });
+		apiMocks.hideSession.mockResolvedValue(undefined);
+		apiMocks.renameSession.mockResolvedValue(undefined);
+		apiMocks.loadAgentModelSections.mockResolvedValue([
+			{
+				id: "codex",
+				label: "Codex",
+				options: [
+					{
+						id: "gpt-5.4",
+						provider: "codex",
+						label: "GPT-5.4",
+						cliModel: "gpt-5.4",
+						effortLevels: ["low", "medium", "high"],
+						supportsFastMode: true,
+					},
+				],
+			},
+		]);
+		apiMocks.startAgentMessageStream.mockImplementation(
+			async (_request, callback) => {
+				callback({
+					kind: "streamingPartial",
+					message: {
+						role: "assistant",
+						content: [
+							{
+								type: "text",
+								id: "answer-part",
+								text: "AI **answer**",
+							},
+						],
+						streaming: true,
+					},
+				});
+				callback({
+					kind: "done",
+					provider: "codex",
+					modelId: "gpt-5.4",
+					resolvedModel: "gpt-5.4",
+					sessionId: null,
+					workingDirectory: "/tmp/helmor-workspace",
+					persisted: true,
+				});
+			},
+		);
 		resetDiffCommentStorage();
 	});
 
@@ -269,6 +338,138 @@ describe("WorkspaceEditorSurface", () => {
 				}),
 			),
 		).toContain("This needs a clearer value.");
+	});
+
+	it("does not open another composer when an existing comment line is clicked", async () => {
+		const user = userEvent.setup();
+		const onChangeSpy = vi.fn();
+
+		render(
+			<TooltipProvider delayDuration={0}>
+				<EditorSurfaceHarness
+					initialSession={{
+						kind: "diff",
+						path: "/tmp/helmor-workspace/src/App.tsx",
+						originalText: "const value = 1;\n",
+						modifiedText: "const value = 2;\n",
+					}}
+					onChangeSpy={onChangeSpy}
+				/>
+			</TooltipProvider>,
+		);
+
+		await waitFor(() => {
+			expect(runtimeMocks.createDiffEditor).toHaveBeenCalled();
+		});
+
+		runtimeMocks.emitDiffLineClick({ side: "modified", lineNumber: 1 });
+		await user.type(await screen.findByLabelText("Diff comment"), "Existing");
+		await user.click(screen.getByRole("button", { name: "Save" }));
+
+		runtimeMocks.emitDiffLineClick({ side: "modified", lineNumber: 1 });
+
+		expect(screen.queryByLabelText("Diff comment")).not.toBeInTheDocument();
+		expect(screen.getByText("Existing")).toBeInTheDocument();
+	});
+
+	it("edits comments and replies on a diff thread", async () => {
+		const user = userEvent.setup();
+		const onChangeSpy = vi.fn();
+
+		render(
+			<TooltipProvider delayDuration={0}>
+				<EditorSurfaceHarness
+					initialSession={{
+						kind: "diff",
+						path: "/tmp/helmor-workspace/src/App.tsx",
+						originalText: "const value = 1;\n",
+						modifiedText: "const value = 2;\n",
+					}}
+					onChangeSpy={onChangeSpy}
+				/>
+			</TooltipProvider>,
+		);
+
+		await waitFor(() => {
+			expect(runtimeMocks.createDiffEditor).toHaveBeenCalled();
+		});
+
+		runtimeMocks.emitDiffLineClick({ side: "modified", lineNumber: 1 });
+		await user.type(await screen.findByLabelText("Diff comment"), "Initial");
+		await user.click(screen.getByRole("button", { name: "Save" }));
+
+		await user.click(screen.getByRole("button", { name: "Edit comment" }));
+		const editComment = await screen.findByLabelText("Edit diff comment");
+		await user.clear(editComment);
+		await user.type(editComment, "Edited **markdown**");
+		await user.click(screen.getByRole("button", { name: "Save" }));
+
+		expect(screen.getByText("Edited **markdown**")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Reply" }));
+		await user.type(
+			await screen.findByLabelText("Diff comment"),
+			"First reply",
+		);
+		await user.click(screen.getByRole("button", { name: "Save" }));
+
+		expect(screen.getByText("First reply")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Edit reply" }));
+		const editReply = await screen.findByLabelText("Edit diff comment");
+		await user.clear(editReply);
+		await user.type(editReply, "Edited reply");
+		await user.click(screen.getByRole("button", { name: "Save" }));
+
+		expect(screen.getByText("Edited reply")).toBeInTheDocument();
+		expect(screen.queryByText("First reply")).not.toBeInTheDocument();
+	});
+
+	it("streams a Helmor reply when a comment mentions @helmor", async () => {
+		const user = userEvent.setup();
+		const onChangeSpy = vi.fn();
+
+		render(
+			<TooltipProvider delayDuration={0}>
+				<EditorSurfaceHarness
+					initialSession={{
+						kind: "diff",
+						path: "/tmp/helmor-workspace/src/App.tsx",
+						originalText: "const value = 1;\n",
+						modifiedText: "const value = 2;\n",
+					}}
+					onChangeSpy={onChangeSpy}
+				/>
+			</TooltipProvider>,
+		);
+
+		await waitFor(() => {
+			expect(runtimeMocks.createDiffEditor).toHaveBeenCalled();
+		});
+
+		runtimeMocks.emitDiffLineClick({ side: "modified", lineNumber: 1 });
+		await user.type(
+			await screen.findByLabelText("Diff comment"),
+			"@helmor why did this change?",
+		);
+		await user.click(screen.getByRole("button", { name: "Save" }));
+
+		await waitFor(() => {
+			expect(apiMocks.startAgentMessageStream).toHaveBeenCalled();
+			expect(screen.getByText("AI **answer**")).toBeInTheDocument();
+		});
+
+		const request = apiMocks.startAgentMessageStream.mock.calls[0][0];
+		expect(request).toEqual(
+			expect.objectContaining({
+				helmorSessionId: "session-ai",
+				workingDirectory: "/tmp/helmor-workspace",
+			}),
+		);
+		expect(request.prompt).toContain("Diff comment thread so far:");
+		expect(request.prompt).toContain("User question:");
+		expect(request.prompt).toContain("why did this change?");
+		expect(apiMocks.hideSession).toHaveBeenCalledWith("session-ai");
 	});
 });
 
