@@ -8,7 +8,14 @@ import {
 	Trash2Icon,
 	XIcon,
 } from "lucide-react";
-import { Suspense, useEffect, useRef } from "react";
+import {
+	Suspense,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { LazyStreamdown } from "@/components/streamdown-loader";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,6 +111,10 @@ export function DiffCommentReplyItem({
 }
 
 export function DiffCommentMarkdown({ body }: { body: string }) {
+	if (hasHelmorMention(body)) {
+		return <DiffCommentMentionText body={body} />;
+	}
+
 	return (
 		<div className="assistant-markdown-scale max-w-none break-words text-[12px] leading-5 text-foreground">
 			<Suspense fallback={<MarkdownFallback body={body} />}>
@@ -119,6 +130,22 @@ function MarkdownFallback({ body }: { body: string }) {
 	return <div className="whitespace-pre-wrap break-words">{body}</div>;
 }
 
+function DiffCommentMentionText({ body }: { body: string }) {
+	const parts = body.split(/(@helmor\b)/gi);
+
+	return (
+		<div className="max-w-none whitespace-pre-wrap break-words text-[12px] leading-5 text-foreground">
+			{parts.map((part, index) =>
+				/^@helmor$/i.test(part) ? (
+					<HelmorMentionPill key={`${part}-${index}`} />
+				) : (
+					<span key={`${part}-${index}`}>{part}</span>
+				),
+			)}
+		</div>
+	);
+}
+
 export function DiffCommentForm({
 	composer,
 	onCancel,
@@ -131,9 +158,38 @@ export function DiffCommentForm({
 	onSave: () => void;
 }) {
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const [cursorIndex, setCursorIndex] = useState(composer.body.length);
 	const canSave = composer.body.trim().length > 0;
 	const isEdit =
 		composer.kind === "edit-comment" || composer.kind === "edit-reply";
+	const mentionMatch = useMemo(
+		() => getHelmorMentionCompletion(composer.body, cursorIndex),
+		[composer.body, cursorIndex],
+	);
+	const hasAgentMention = hasHelmorMention(composer.body);
+
+	const updateCursorIndex = useCallback(() => {
+		setCursorIndex(textareaRef.current?.selectionStart ?? 0);
+	}, []);
+
+	const completeHelmorMention = useCallback(() => {
+		if (!mentionMatch) {
+			return;
+		}
+
+		const nextBody = [
+			composer.body.slice(0, mentionMatch.start),
+			"@helmor ",
+			composer.body.slice(cursorIndex),
+		].join("");
+		const nextCursor = mentionMatch.start + "@helmor ".length;
+		onChange(nextBody);
+		window.requestAnimationFrame(() => {
+			textareaRef.current?.focus();
+			textareaRef.current?.setSelectionRange(nextCursor, nextCursor);
+			setCursorIndex(nextCursor);
+		});
+	}, [composer.body, cursorIndex, mentionMatch, onChange]);
 
 	useEffect(() => {
 		textareaRef.current?.focus();
@@ -166,29 +222,68 @@ export function DiffCommentForm({
 							: formatLineLabel(composer)}
 				</span>
 			</div>
-			<Textarea
-				ref={textareaRef}
-				aria-label={isEdit ? "Edit diff comment" : "Diff comment"}
-				value={composer.body}
-				placeholder={
-					composer.kind === "reply" ? "Reply..." : "Add a comment..."
-				}
-				onChange={(event) => onChange(event.target.value)}
-				onKeyDown={(event) => {
-					if (event.key === "Escape") {
-						event.preventDefault();
-						onCancel();
-						return;
+			{hasAgentMention ? (
+				<div className="mb-1.5 flex items-center gap-1.5">
+					<HelmorMentionPill />
+				</div>
+			) : null}
+			<div className="relative">
+				<Textarea
+					ref={textareaRef}
+					aria-label={isEdit ? "Edit diff comment" : "Diff comment"}
+					value={composer.body}
+					placeholder={
+						composer.kind === "reply" ? "Reply..." : "Add a comment..."
 					}
-					if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-						event.preventDefault();
-						if (canSave) {
-							onSave();
+					onChange={(event) => {
+						onChange(event.target.value);
+						setCursorIndex(
+							event.target.selectionStart ?? event.target.value.length,
+						);
+					}}
+					onClick={updateCursorIndex}
+					onKeyUp={updateCursorIndex}
+					onSelect={updateCursorIndex}
+					onKeyDown={(event) => {
+						if (
+							mentionMatch &&
+							(event.key === "Tab" || event.key === "Enter")
+						) {
+							event.preventDefault();
+							completeHelmorMention();
+							return;
 						}
-					}
-				}}
-				className="min-h-20 resize-none rounded-md bg-background/80 px-2 py-1.5 font-sans text-[12px] leading-5 md:text-[12px]"
-			/>
+						if (event.key === "Escape") {
+							event.preventDefault();
+							onCancel();
+							return;
+						}
+						if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+							event.preventDefault();
+							if (canSave) {
+								onSave();
+							}
+						}
+					}}
+					className="min-h-20 resize-none rounded-md bg-background/80 px-2 py-1.5 font-sans text-[12px] leading-5 md:text-[12px]"
+				/>
+				{mentionMatch ? (
+					<button
+						type="button"
+						onMouseDown={(event) => {
+							event.preventDefault();
+							completeHelmorMention();
+						}}
+						className="absolute left-1.5 top-full z-10 mt-1 flex cursor-pointer items-center gap-2 rounded-md border border-primary/35 bg-popover px-2 py-1.5 text-left text-[12px] text-popover-foreground shadow-lg"
+					>
+						<HelmorMentionPill />
+						<span className="text-muted-foreground">Agent</span>
+						<span className="ml-2 rounded border border-border px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
+							Tab
+						</span>
+					</button>
+				) : null}
+			</div>
 			<div className="mt-2 flex justify-end gap-1">
 				<Button
 					type="button"
@@ -215,4 +310,35 @@ export function DiffCommentForm({
 			</div>
 		</form>
 	);
+}
+
+function HelmorMentionPill() {
+	return (
+		<span className="inline-flex h-5 items-center gap-1 rounded-full border border-primary/35 bg-primary/12 px-1.5 text-[11px] font-medium leading-none text-primary">
+			<BotIcon className="size-3" strokeWidth={1.8} />
+			@helmor
+		</span>
+	);
+}
+
+function hasHelmorMention(body: string): boolean {
+	return /(^|[\s([{@])@helmor\b/i.test(body);
+}
+
+function getHelmorMentionCompletion(
+	body: string,
+	cursorIndex: number,
+): { start: number } | null {
+	const beforeCursor = body.slice(0, cursorIndex);
+	const match = beforeCursor.match(/(^|[\s([{@])@([a-z]*)$/i);
+	if (!match || match.index === undefined) {
+		return null;
+	}
+
+	const query = match[2]?.toLowerCase() ?? "";
+	if (!query || ("helmor".startsWith(query) && query !== "helmor")) {
+		return { start: match.index + (match[1]?.length ?? 0) };
+	}
+
+	return null;
 }

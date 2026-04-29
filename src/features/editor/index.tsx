@@ -1,4 +1,12 @@
-import { ExternalLink, X } from "lucide-react";
+import {
+	ExternalLink,
+	Loader2Icon,
+	MessageSquareIcon,
+	MessageSquareOffIcon,
+	RefreshCcwIcon,
+	SparklesIcon,
+	X,
+} from "lucide-react";
 import {
 	type MutableRefObject,
 	useCallback,
@@ -15,6 +23,18 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { generateFileReviewSummary } from "@/features/review-changes/agents";
+import { buildEffectiveFileSummaryPrompt } from "@/features/review-changes/prompts";
+import {
+	getFileReviewSummaryCacheKey,
+	loadFileReviewSummaryCache,
+	pruneExpiredFileReviewSummaryCache,
+	saveFileReviewSummaryCache,
+} from "@/features/review-changes/summary-cache";
+import {
+	ReviewSummaryPanel,
+	type ReviewSummaryPanelState,
+} from "@/features/review-changes/summary-panel";
 import { ShortcutDisplay } from "@/features/shortcuts/shortcut-display";
 import type { EditorSessionState } from "@/lib/editor-session";
 import type {
@@ -23,6 +43,7 @@ import type {
 	EditorChangeHunk,
 } from "@/lib/monaco-runtime";
 import { useSettings } from "@/lib/settings";
+import { cn } from "@/lib/utils";
 import { describeUnknownError } from "@/lib/workspace-helpers";
 import { startDiffCommentAiReply } from "./diff-comment-agent";
 import { containsHelmorMention } from "./diff-comment-ai";
@@ -94,6 +115,10 @@ export function WorkspaceEditorSurface({
 	const diffCommentTargetsRef = useRef<DiffLineTarget[]>([]);
 	const diffCommentScopeRef = useRef<DiffCommentScope | null>(null);
 	const diffCommentsRef = useRef<DiffComment[]>([]);
+	const reviewSummaryKeyRef = useRef<string | null>(null);
+	const reviewSummaryStatesRef = useRef<Map<string, ReviewSummaryPanelState>>(
+		new Map(),
+	);
 	const [surfaceStatus, setSurfaceStatus] = useState<SurfaceStatus>({
 		kind: "ready",
 	});
@@ -105,6 +130,10 @@ export function WorkspaceEditorSurface({
 	const [diffCommentAnchors, setDiffCommentAnchors] = useState<
 		Record<string, DiffLineAnchor>
 	>({});
+	const [commentsVisible, setCommentsVisible] = useState(true);
+	const [summaryPanelOpen, setSummaryPanelOpen] = useState(false);
+	const [reviewSummaryState, setReviewSummaryState] =
+		useState<ReviewSummaryPanelState>({ status: "idle" });
 	latestSessionRef.current = editorSession;
 	onChangeSessionRef.current = onChangeSession;
 	onErrorRef.current = onError;
@@ -120,6 +149,7 @@ export function WorkspaceEditorSurface({
 		editorSession.modifiedText !== undefined;
 	const closeLabel =
 		editorSession.kind === "diff" ? "Close diff view" : "Close editor view";
+	const diffCommentCount = diffComments.length;
 	const openExternalLabel = externalEditorName
 		? `Open file in ${externalEditorName}`
 		: "Open file in external editor";
@@ -141,6 +171,28 @@ export function WorkspaceEditorSurface({
 		editorSession.path,
 		workspaceRootPath,
 	]);
+	const effectiveReviewSummaryPrompt = buildEffectiveFileSummaryPrompt({
+		userPrompt: settings.reviewSummaryPrompt,
+		overwrite: settings.reviewSummaryPromptOverwrite,
+	});
+	const reviewSummaryKey = diffCommentScope
+		? getFileReviewSummaryCacheKey(
+				diffCommentScope,
+				effectiveReviewSummaryPrompt,
+			)
+		: null;
+	reviewSummaryKeyRef.current = reviewSummaryKey;
+	const hasGeneratedReviewSummary = reviewSummaryState.status === "ready";
+
+	const setReviewSummaryStateForKey = useCallback(
+		(key: string, state: ReviewSummaryPanelState) => {
+			reviewSummaryStatesRef.current.set(key, state);
+			if (reviewSummaryKeyRef.current === key) {
+				setReviewSummaryState(state);
+			}
+		},
+		[],
+	);
 
 	const updateDiffCommentAnchors = useCallback(() => {
 		const controller = diffControllerRef.current;
@@ -245,6 +297,7 @@ export function WorkspaceEditorSurface({
 						id: createDiffCommentId(),
 						side: diffCommentComposer.side,
 						lineNumber: diffCommentComposer.lineNumber,
+						endLineNumber: diffCommentComposer.endLineNumber,
 						body,
 						createdAt: now,
 						replies: [],
@@ -352,6 +405,97 @@ export function WorkspaceEditorSurface({
 		[applyDiffCommentUpdate, diffCommentScope],
 	);
 
+	const handleToggleDiffCommentBlocking = useCallback(
+		(id: string) => {
+			if (!diffCommentScope) {
+				return;
+			}
+			applyDiffCommentUpdate(diffCommentScope, (comments) =>
+				comments.map((comment) =>
+					comment.id === id
+						? { ...comment, blocking: !comment.blocking }
+						: comment,
+				),
+			);
+		},
+		[applyDiffCommentUpdate, diffCommentScope],
+	);
+
+	const handleGenerateReviewSummary = useCallback(
+		({ force = false }: { force?: boolean } = {}) => {
+			if (!diffCommentScope || editorSession.kind !== "diff") {
+				return;
+			}
+
+			const key = reviewSummaryKey;
+			if (!key) {
+				return;
+			}
+			const cachedState = reviewSummaryStatesRef.current.get(key);
+			if (
+				!force &&
+				(cachedState?.status === "loading" || cachedState?.status === "ready")
+			) {
+				setSummaryPanelOpen(true);
+				setReviewSummaryState(cachedState);
+				return;
+			}
+
+			setSummaryPanelOpen(true);
+			setReviewSummaryStateForKey(key, { status: "loading" });
+			void generateFileReviewSummary({
+				scope: diffCommentScope,
+				path: editorSession.path,
+				workspaceId,
+				workspaceRootPath,
+				originalRef: editorSession.originalRef ?? null,
+				modifiedRef: editorSession.modifiedRef ?? null,
+				originalText: editorSession.originalText,
+				modifiedText: editorSession.modifiedText,
+				settings,
+				customPrompt: effectiveReviewSummaryPrompt,
+			})
+				.then((summary) => {
+					saveFileReviewSummaryCache({
+						scope: diffCommentScope,
+						prompt: effectiveReviewSummaryPrompt,
+						summary,
+					});
+					setReviewSummaryStateForKey(key, { status: "ready", summary });
+				})
+				.catch((error) => {
+					setReviewSummaryStateForKey(key, {
+						status: "error",
+						message: describeUnknownError(
+							error,
+							"Unable to generate a review summary.",
+						),
+					});
+				});
+		},
+		[
+			diffCommentScope,
+			effectiveReviewSummaryPrompt,
+			editorSession,
+			reviewSummaryKey,
+			setReviewSummaryStateForKey,
+			settings,
+			workspaceId,
+			workspaceRootPath,
+		],
+	);
+
+	const handleShowReviewSummary = useCallback(() => {
+		setSummaryPanelOpen(true);
+		if (reviewSummaryState.status === "idle") {
+			handleGenerateReviewSummary();
+		}
+	}, [handleGenerateReviewSummary, reviewSummaryState.status]);
+
+	useEffect(() => {
+		pruneExpiredFileReviewSummaryCache();
+	}, []);
+
 	useEffect(() => {
 		if (
 			(editorSession.kind === "file" && canRenderFile) ||
@@ -440,7 +584,27 @@ export function WorkspaceEditorSurface({
 		setDiffComments(loadedComments);
 		setDiffCommentComposer(null);
 		setDiffCommentAnchors({});
-	}, [diffCommentScope]);
+		setCommentsVisible(true);
+		setSummaryPanelOpen(false);
+		const cachedState = reviewSummaryKey
+			? reviewSummaryStatesRef.current.get(reviewSummaryKey)
+			: undefined;
+		if (cachedState) {
+			setReviewSummaryState(cachedState);
+			return;
+		}
+		const persistedSummary = loadFileReviewSummaryCache(
+			diffCommentScope,
+			effectiveReviewSummaryPrompt,
+		);
+		const persistedState: ReviewSummaryPanelState = persistedSummary
+			? { status: "ready", summary: persistedSummary }
+			: { status: "idle" };
+		if (reviewSummaryKey && persistedSummary) {
+			reviewSummaryStatesRef.current.set(reviewSummaryKey, persistedState);
+		}
+		setReviewSummaryState(persistedState);
+	}, [diffCommentScope, effectiveReviewSummaryPrompt, reviewSummaryKey]);
 
 	useEffect(() => {
 		const targets = new Map<string, DiffLineTarget>();
@@ -448,12 +612,14 @@ export function WorkspaceEditorSurface({
 			targets.set(getDiffLineKey(comment), {
 				side: comment.side,
 				lineNumber: comment.lineNumber,
+				endLineNumber: comment.endLineNumber,
 			});
 		}
 		if (diffCommentComposer) {
 			targets.set(getDiffLineKey(diffCommentComposer), {
 				side: diffCommentComposer.side,
 				lineNumber: diffCommentComposer.lineNumber,
+				endLineNumber: diffCommentComposer.endLineNumber,
 			});
 		}
 		diffCommentTargetsRef.current = [...targets.values()];
@@ -813,6 +979,132 @@ export function WorkspaceEditorSurface({
 				<div className="min-w-0 flex-1" data-tauri-drag-region />
 
 				<div className="flex shrink-0 items-center pr-2">
+					{editorSession.kind === "diff" ? (
+						<>
+							<div className="mr-1 flex items-center rounded-md border border-border/70 bg-muted/30 p-0.5">
+								<Button
+									type="button"
+									variant="ghost"
+									size="xs"
+									onClick={() => setSummaryPanelOpen(false)}
+									aria-pressed={!summaryPanelOpen}
+									className={cn(
+										"h-6 rounded px-2 text-[11px] text-muted-foreground hover:text-foreground",
+										!summaryPanelOpen &&
+											"bg-background text-foreground shadow-sm",
+									)}
+								>
+									Diff
+								</Button>
+								<Button
+									type="button"
+									variant="ghost"
+									size="xs"
+									onClick={handleShowReviewSummary}
+									aria-pressed={summaryPanelOpen}
+									className={cn(
+										"h-6 rounded px-2 text-[11px] text-muted-foreground hover:text-foreground",
+										summaryPanelOpen &&
+											"bg-background text-foreground shadow-sm",
+									)}
+								>
+									{reviewSummaryState.status === "loading" ? (
+										<Loader2Icon
+											data-icon="inline-start"
+											className="size-3 animate-spin"
+											strokeWidth={1.8}
+										/>
+									) : (
+										<SparklesIcon
+											data-icon="inline-start"
+											className="size-3"
+											strokeWidth={1.8}
+										/>
+									)}
+									Summary
+								</Button>
+							</div>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon-sm"
+										onClick={() =>
+											handleGenerateReviewSummary({
+												force: hasGeneratedReviewSummary,
+											})
+										}
+										disabled={reviewSummaryState.status === "loading"}
+										aria-label={
+											hasGeneratedReviewSummary
+												? "Refresh review summary"
+												: "Generate review summary"
+										}
+										className="text-muted-foreground hover:text-foreground"
+									>
+										{reviewSummaryState.status === "loading" ? (
+											<Loader2Icon
+												className="size-3.5 animate-spin"
+												strokeWidth={1.8}
+											/>
+										) : hasGeneratedReviewSummary ? (
+											<RefreshCcwIcon className="size-3.5" strokeWidth={1.8} />
+										) : (
+											<SparklesIcon className="size-3.5" strokeWidth={1.8} />
+										)}
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent
+									side="bottom"
+									sideOffset={4}
+									className="flex h-[24px] items-center rounded-md px-2 text-[12px] leading-none"
+								>
+									{hasGeneratedReviewSummary
+										? "Refresh summary"
+										: "Generate summary"}
+								</TooltipContent>
+							</Tooltip>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										onClick={() => setCommentsVisible((current) => !current)}
+										aria-label={
+											commentsVisible
+												? "Hide diff comments"
+												: "Show diff comments"
+										}
+										className="gap-1 px-1.5 text-muted-foreground hover:text-foreground"
+									>
+										{commentsVisible ? (
+											<MessageSquareIcon
+												className="size-3.5"
+												strokeWidth={1.8}
+											/>
+										) : (
+											<MessageSquareOffIcon
+												className="size-3.5"
+												strokeWidth={1.8}
+											/>
+										)}
+										<span className="min-w-3 text-[11px] tabular-nums">
+											{diffCommentCount}
+										</span>
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent
+									side="bottom"
+									sideOffset={4}
+									className="flex h-[24px] items-center rounded-md px-2 text-[12px] leading-none"
+								>
+									{commentsVisible ? "Hide comments" : "Show comments"}
+								</TooltipContent>
+							</Tooltip>
+						</>
+					) : null}
 					{editorSession.kind === "file" && onOpenExternalFile ? (
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -850,62 +1142,75 @@ export function WorkspaceEditorSurface({
 				</div>
 			</div>
 
-			<div className="relative flex min-h-0 flex-1 bg-background">
-				<div
-					ref={editorHostRef}
-					aria-label="Editor canvas"
-					className="h-full min-h-0 flex-1"
-				/>
-
-				{surfaceStatus.kind === "error" && (
-					<div className="absolute inset-0 flex items-center justify-center bg-background">
-						<SurfaceMessage message={surfaceStatus.message} />
-					</div>
-				)}
-				{editorSession.kind === "diff" && (
-					<DiffCommentLayer
-						comments={diffComments}
-						composer={diffCommentComposer}
-						anchors={diffCommentAnchors}
-						onCancelComposer={() => setDiffCommentComposer(null)}
-						onChangeComposer={(body) =>
-							setDiffCommentComposer((current) =>
-								current ? { ...current, body } : current,
-							)
-						}
-						onDeleteComment={handleDeleteDiffComment}
-						onDeleteReply={handleDeleteDiffCommentReply}
-						onEditComment={(comment) =>
-							setDiffCommentComposer({
-								side: comment.side,
-								lineNumber: comment.lineNumber,
-								kind: "edit-comment",
-								commentId: comment.id,
-								body: comment.body,
-							})
-						}
-						onEditReply={(comment, reply) =>
-							setDiffCommentComposer({
-								side: comment.side,
-								lineNumber: comment.lineNumber,
-								kind: "edit-reply",
-								commentId: comment.id,
-								replyId: reply.id,
-								body: reply.body,
-							})
-						}
-						onReply={(comment) =>
-							setDiffCommentComposer({
-								side: comment.side,
-								lineNumber: comment.lineNumber,
-								kind: "reply",
-								commentId: comment.id,
-								body: "",
-							})
-						}
-						onSubmitComposer={handleSaveDiffComment}
+			<div className="flex min-h-0 flex-1 bg-background">
+				<div className="relative min-h-0 flex-1">
+					<div
+						ref={editorHostRef}
+						aria-label="Editor canvas"
+						className="h-full min-h-0 flex-1"
 					/>
-				)}
+
+					{surfaceStatus.kind === "error" && (
+						<div className="absolute inset-0 flex items-center justify-center bg-background">
+							<SurfaceMessage message={surfaceStatus.message} />
+						</div>
+					)}
+					{editorSession.kind === "diff" && commentsVisible && (
+						<DiffCommentLayer
+							comments={diffComments}
+							composer={diffCommentComposer}
+							anchors={diffCommentAnchors}
+							onCancelComposer={() => setDiffCommentComposer(null)}
+							onChangeComposer={(body) =>
+								setDiffCommentComposer((current) =>
+									current ? { ...current, body } : current,
+								)
+							}
+							onDeleteComment={handleDeleteDiffComment}
+							onDeleteReply={handleDeleteDiffCommentReply}
+							onEditComment={(comment) =>
+								setDiffCommentComposer({
+									side: comment.side,
+									lineNumber: comment.lineNumber,
+									endLineNumber: comment.endLineNumber,
+									kind: "edit-comment",
+									commentId: comment.id,
+									body: comment.body,
+								})
+							}
+							onEditReply={(comment, reply) =>
+								setDiffCommentComposer({
+									side: comment.side,
+									lineNumber: comment.lineNumber,
+									endLineNumber: comment.endLineNumber,
+									kind: "edit-reply",
+									commentId: comment.id,
+									replyId: reply.id,
+									body: reply.body,
+								})
+							}
+							onReply={(comment) =>
+								setDiffCommentComposer({
+									side: comment.side,
+									lineNumber: comment.lineNumber,
+									endLineNumber: comment.endLineNumber,
+									kind: "reply",
+									commentId: comment.id,
+									body: "",
+								})
+							}
+							onSubmitComposer={handleSaveDiffComment}
+							onToggleBlocking={handleToggleDiffCommentBlocking}
+						/>
+					)}
+					{editorSession.kind === "diff" && summaryPanelOpen ? (
+						<ReviewSummaryPanel
+							state={reviewSummaryState}
+							onRegenerate={() => handleGenerateReviewSummary({ force: true })}
+							onClose={() => setSummaryPanelOpen(false)}
+						/>
+					) : null}
+				</div>
 			</div>
 		</section>
 	);

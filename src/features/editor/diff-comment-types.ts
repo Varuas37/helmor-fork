@@ -28,5 +28,8 @@ export function getDiffLineKey(target: DiffLineTarget): string {
 
 export function formatLineLabel(target: DiffLineTarget) {
 	const sideLabel = target.side === "original" ? "Original" : "Modified";
+	if (target.endLineNumber && target.endLineNumber > target.lineNumber) {
+		return `${sideLabel} lines ${target.lineNumber}-${target.endLineNumber}`;
+	}
 	return `${sideLabel} line ${target.lineNumber}`;
 }

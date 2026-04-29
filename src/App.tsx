@@ -35,11 +35,18 @@ import { useWorkspaceCommitLifecycle } from "@/features/commit/hooks/use-commit-
 import { WorkspaceConversationContainer } from "@/features/conversation";
 import { useDockUnreadBadge } from "@/features/dock-badge";
 import { WorkspaceEditorSurface } from "@/features/editor";
+import { loadAllDiffCommentsForPaths } from "@/features/editor/diff-comment-storage";
 import { WorkspaceInspectorSidebar } from "@/features/inspector";
 import { WorkspacesSidebarContainer } from "@/features/navigation/container";
 import { AppOnboarding } from "@/features/onboarding";
 import { seedNewSessionInCache } from "@/features/panel/session-cache";
 import { useConfirmSessionClose } from "@/features/panel/use-confirm-session-close";
+import { applyReviewAgentCommentsToStorage } from "@/features/review-changes/comment-actions";
+import { parseReviewAgentActionBlock } from "@/features/review-changes/parser";
+import {
+	buildFixReviewCommentsPrompt,
+	buildReviewAgentPrompt,
+} from "@/features/review-changes/prompts";
 import {
 	SettingsButton,
 	SettingsDialog,
@@ -74,13 +81,16 @@ import { clampZoom, useZoom, ZOOM_STEP } from "@/shell/use-zoom";
 import {
 	createSession,
 	drainPendingCliSends,
+	type ExtendedMessagePart,
 	markSessionRead,
 	markSessionUnread,
 	openFileInEditor,
 	openWorkspaceInEditor,
 	openWorkspaceInFinder,
 	prewarmSlashCommandsForWorkspace,
+	renameSession,
 	syncWorkspaceWithTargetBranch,
+	type ThreadMessageLike,
 	triggerWorkspaceFetch,
 	unhideSession,
 	type WorkspaceDetail,
@@ -93,7 +103,11 @@ import {
 	resolveComposerInsertTarget,
 } from "./lib/composer-insert";
 import { ComposerInsertProvider } from "./lib/composer-insert-context";
-import type { DiffOpenOptions, EditorSessionState } from "./lib/editor-session";
+import type {
+	DiffOpenOptions,
+	EditorSessionState,
+	InspectorFileItem,
+} from "./lib/editor-session";
 import { isPathWithinRoot } from "./lib/editor-session";
 import {
 	archivedWorkspacesQueryOptions,
@@ -379,6 +393,16 @@ function AppShell({
 	const sessionSelectionHistoryByWorkspaceRef = useRef<
 		Record<string, string[]>
 	>({});
+	const pendingReviewSessionsRef = useRef<
+		Map<
+			string,
+			{
+				workspaceRootPath: string;
+				targetBranch: string | null;
+				changes: InspectorFileItem[];
+			}
+		>
+	>(new Map());
 	const pushWorkspaceToast = useCallback(
 		(
 			description: string,
@@ -1516,8 +1540,203 @@ function AppShell({
 		pushToast: pushWorkspaceToast,
 	});
 
+	const createVisibleReviewSession = useCallback(
+		async (title: string) => {
+			const workspaceId = selectedWorkspaceIdRef.current;
+			if (!workspaceId) {
+				throw new Error("Open a workspace before starting review.");
+			}
+
+			const { sessionId } = await createSession(workspaceId, {
+				permissionMode: "bypassPermissions",
+			});
+			void renameSession(sessionId, title).catch((error) => {
+				console.warn("[review-changes] failed to name review session:", error);
+			});
+			const cachedWorkspace =
+				queryClient.getQueryData<WorkspaceDetail | null>(
+					helmorQueryKeys.workspaceDetail(workspaceId),
+				) ?? null;
+			seedNewSessionInCache({
+				queryClient,
+				workspaceId,
+				sessionId,
+				workspace: cachedWorkspace,
+				existingSessions:
+					queryClient.getQueryData<WorkspaceSessionSummary[]>(
+						helmorQueryKeys.workspaceSessions(workspaceId),
+					) ?? [],
+			});
+			setWorkspaceViewMode("conversation");
+			handleSelectSession(sessionId);
+			void Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: helmorQueryKeys.workspaceDetail(workspaceId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: helmorQueryKeys.workspaceSessions(workspaceId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: helmorQueryKeys.workspaceGroups,
+				}),
+			]);
+			return { sessionId, workspaceId };
+		},
+		[handleSelectSession, queryClient],
+	);
+
+	const handleStartReviewAgent = useCallback(
+		async (changes: InspectorFileItem[]) => {
+			if (!workspaceRootPath) {
+				pushWorkspaceToast(
+					"Open a workspace with a resolved root path before reviewing changes.",
+					"Review unavailable",
+				);
+				return;
+			}
+			if (changes.length === 0) {
+				pushWorkspaceToast("No changed files to review.", "Review unavailable");
+				return;
+			}
+
+			try {
+				const { sessionId } =
+					await createVisibleReviewSession("Review changes");
+				const detail = selectedWorkspaceDetailQuery.data;
+				const target = detail?.intendedTargetBranch ?? detail?.defaultBranch;
+				const targetBranch = target
+					? `${detail?.remote ?? "origin"}/${target}`
+					: null;
+				pendingReviewSessionsRef.current.set(sessionId, {
+					workspaceRootPath,
+					targetBranch,
+					changes,
+				});
+				queuePendingPromptForSession({
+					sessionId,
+					prompt: buildReviewAgentPrompt({
+						changes,
+						workspaceRootPath,
+						targetBranch,
+					}),
+					permissionMode: "bypassPermissions",
+					forceQueue: true,
+				});
+			} catch (error) {
+				pushWorkspaceToast(
+					error instanceof Error ? error.message : String(error),
+					"Review failed",
+				);
+			}
+		},
+		[
+			createVisibleReviewSession,
+			pushWorkspaceToast,
+			queuePendingPromptForSession,
+			selectedWorkspaceDetailQuery.data,
+			workspaceRootPath,
+		],
+	);
+
+	const handleFixReviewComments = useCallback(
+		async (changes: InspectorFileItem[]) => {
+			if (!workspaceRootPath) {
+				pushWorkspaceToast(
+					"Open a workspace with a resolved root path before fixing comments.",
+					"Review unavailable",
+				);
+				return;
+			}
+			const entries = loadAllDiffCommentsForPaths({
+				workspaceRootPath,
+				paths: changes,
+				onlyBlocking: true,
+			});
+			if (entries.length === 0) {
+				pushWorkspaceToast(
+					"No blocking review comments were found for these changes.",
+					"Nothing to fix",
+					"default",
+				);
+				return;
+			}
+
+			try {
+				const { sessionId } = await createVisibleReviewSession(
+					"Fix review comments",
+				);
+				queuePendingPromptForSession({
+					sessionId,
+					prompt: buildFixReviewCommentsPrompt({
+						workspaceRootPath,
+						entries: entries.map((entry) => ({
+							path: entry.path,
+							comments: entry.comments,
+						})),
+					}),
+					permissionMode: "bypassPermissions",
+					forceQueue: true,
+				});
+			} catch (error) {
+				pushWorkspaceToast(
+					error instanceof Error ? error.message : String(error),
+					"Unable to start fix session",
+				);
+			}
+		},
+		[
+			createVisibleReviewSession,
+			pushWorkspaceToast,
+			queuePendingPromptForSession,
+			workspaceRootPath,
+		],
+	);
+
+	const handleCompletedReviewSession = useCallback(
+		(sessionId: string) => {
+			const pending = pendingReviewSessionsRef.current.get(sessionId);
+			if (!pending) {
+				return;
+			}
+			pendingReviewSessionsRef.current.delete(sessionId);
+
+			void (async () => {
+				await queryClient.invalidateQueries({
+					queryKey: [...helmorQueryKeys.sessionMessages(sessionId), "thread"],
+				});
+				const messages = await queryClient.fetchQuery(
+					sessionThreadMessagesQueryOptions(sessionId),
+				);
+				const markdown = extractLatestAssistantMarkdown(messages);
+				const actionBlock = parseReviewAgentActionBlock(markdown);
+				const result = applyReviewAgentCommentsToStorage({
+					workspaceRootPath: pending.workspaceRootPath,
+					targetBranch: pending.targetBranch,
+					changes: pending.changes,
+					comments: actionBlock.comments,
+				});
+				const skippedSuffix =
+					result.skipped > 0 ? `, ${result.skipped} skipped` : "";
+				pushWorkspaceToast(
+					`${result.applied} review comment${
+						result.applied === 1 ? "" : "s"
+					} added${skippedSuffix}.`,
+					"Review complete",
+					"default",
+				);
+			})().catch((error) => {
+				pushWorkspaceToast(
+					error instanceof Error ? error.message : String(error),
+					"Review comments failed",
+				);
+			});
+		},
+		[pushWorkspaceToast, queryClient],
+	);
+
 	const handleSessionCompleted = useCallback(
 		(sessionId: string, workspaceId: string) => {
+			handleCompletedReviewSession(sessionId);
 			setSettledSessionIds((prev) => {
 				if (prev.has(sessionId)) return prev;
 				const next = new Set(prev);
@@ -1556,7 +1775,7 @@ function AppShell({
 				)?.title ?? "Workspace";
 			notify({ title: "Session completed", body: name });
 		},
-		[notify, queryClient],
+		[handleCompletedReviewSession, notify, queryClient],
 	);
 
 	const handleSessionAborted = useCallback((sessionId: string) => {
@@ -2668,6 +2887,8 @@ function AppShell({
 													activeEditorPath={editorSession?.path ?? null}
 													onOpenEditorFile={handleOpenEditorFile}
 													onOpenWorkspaceFile={handleOpenFileReference}
+													onReviewChanges={handleStartReviewAgent}
+													onFixReviewComments={handleFixReviewComments}
 													onCommitAction={handleInspectorCommitAction}
 													currentSessionId={displayedSessionId}
 													onQueuePendingPromptForSession={
@@ -2698,4 +2919,33 @@ function AppShell({
 		</TooltipProvider>
 	);
 }
+
+function extractLatestAssistantMarkdown(messages: ThreadMessageLike[]): string {
+	for (let index = messages.length - 1; index >= 0; index -= 1) {
+		const message = messages[index];
+		if (message.role !== "assistant") {
+			continue;
+		}
+
+		const markdown = message.content.flatMap(extractMessageText).join("\n\n");
+		if (markdown.trim()) {
+			return markdown.trim();
+		}
+	}
+
+	return "";
+}
+
+function extractMessageText(part: ExtendedMessagePart): string[] {
+	if (part.type === "text") {
+		return [part.text];
+	}
+
+	if (part.type === "tool-call") {
+		return (part.children ?? []).flatMap(extractMessageText);
+	}
+
+	return [];
+}
+
 export default App;

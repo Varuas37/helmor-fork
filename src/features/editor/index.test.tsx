@@ -403,6 +403,98 @@ describe("WorkspaceEditorSurface", () => {
 		).toContain("This needs a clearer value.");
 	});
 
+	it("persists range comments from selected diff lines", async () => {
+		const user = userEvent.setup();
+		const onChangeSpy = vi.fn();
+
+		render(
+			<TooltipProvider delayDuration={0}>
+				<EditorSurfaceHarness
+					initialSession={{
+						kind: "diff",
+						path: "/tmp/helmor-workspace/src/App.tsx",
+						originalText: ["const a = 1;", "const b = 2;", ""].join("\n"),
+						modifiedText: ["const a = 1;", "const b = 3;", ""].join("\n"),
+					}}
+					onChangeSpy={onChangeSpy}
+				/>
+			</TooltipProvider>,
+		);
+
+		await waitFor(() => {
+			expect(runtimeMocks.createDiffEditor).toHaveBeenCalled();
+		});
+
+		runtimeMocks.emitDiffLineClick({
+			side: "modified",
+			lineNumber: 1,
+			endLineNumber: 2,
+		});
+
+		await user.type(
+			await screen.findByLabelText("Diff comment"),
+			"These lines should move together.",
+		);
+		await user.click(screen.getByRole("button", { name: "Save" }));
+
+		expect(screen.getByText("Modified lines 1-2")).toBeInTheDocument();
+		expect(
+			window.localStorage.getItem(
+				getDiffCommentStorageKey({
+					workspaceRootPath: "/tmp/helmor-workspace",
+					path: "/tmp/helmor-workspace/src/App.tsx",
+				}),
+			),
+		).toContain('"endLineNumber":2');
+	});
+
+	it("marks comments as blocking for fix review flow", async () => {
+		const user = userEvent.setup();
+		const onChangeSpy = vi.fn();
+
+		render(
+			<TooltipProvider delayDuration={0}>
+				<EditorSurfaceHarness
+					initialSession={{
+						kind: "diff",
+						path: "/tmp/helmor-workspace/src/App.tsx",
+						originalText: "const value = 1;\n",
+						modifiedText: "const value = 2;\n",
+					}}
+					onChangeSpy={onChangeSpy}
+				/>
+			</TooltipProvider>,
+		);
+
+		await waitFor(() => {
+			expect(runtimeMocks.createDiffEditor).toHaveBeenCalled();
+		});
+
+		runtimeMocks.emitDiffLineClick({ side: "modified", lineNumber: 1 });
+		await user.type(await screen.findByLabelText("Diff comment"), "Must fix");
+		await user.click(screen.getByRole("button", { name: "Save" }));
+
+		await user.click(
+			screen.getByRole("button", { name: "Mark blocking comment" }),
+		);
+		expect(screen.getByText("Modified line 1 · Blocking")).toBeInTheDocument();
+		expect(
+			window.localStorage.getItem(
+				getDiffCommentStorageKey({
+					workspaceRootPath: "/tmp/helmor-workspace",
+					path: "/tmp/helmor-workspace/src/App.tsx",
+				}),
+			),
+		).toContain('"blocking":true');
+
+		await user.click(
+			screen.getByRole("button", { name: "Unmark blocking comment" }),
+		);
+		expect(
+			screen.queryByText("Modified line 1 · Blocking"),
+		).not.toBeInTheDocument();
+	});
+
 	it("does not open another composer when an existing comment line is clicked", async () => {
 		const user = userEvent.setup();
 		const onChangeSpy = vi.fn();
@@ -433,6 +525,39 @@ describe("WorkspaceEditorSurface", () => {
 
 		expect(screen.queryByLabelText("Diff comment")).not.toBeInTheDocument();
 		expect(screen.getByText("Existing")).toBeInTheDocument();
+	});
+
+	it("completes Helmor mentions in diff comments", async () => {
+		const user = userEvent.setup();
+		const onChangeSpy = vi.fn();
+
+		render(
+			<TooltipProvider delayDuration={0}>
+				<EditorSurfaceHarness
+					initialSession={{
+						kind: "diff",
+						path: "/tmp/helmor-workspace/src/App.tsx",
+						originalText: "const value = 1;\n",
+						modifiedText: "const value = 2;\n",
+					}}
+					onChangeSpy={onChangeSpy}
+				/>
+			</TooltipProvider>,
+		);
+
+		await waitFor(() => {
+			expect(runtimeMocks.createDiffEditor).toHaveBeenCalled();
+		});
+
+		runtimeMocks.emitDiffLineClick({ side: "modified", lineNumber: 1 });
+		const textarea = await screen.findByLabelText("Diff comment");
+		await user.type(textarea, "@");
+		expect(
+			screen.getByRole("button", { name: /@helmor/i }),
+		).toBeInTheDocument();
+
+		await user.keyboard("{Tab}");
+		expect(textarea).toHaveValue("@helmor ");
 	});
 
 	it("edits comments and replies on a diff thread", async () => {

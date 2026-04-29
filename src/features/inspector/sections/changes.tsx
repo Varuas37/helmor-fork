@@ -5,15 +5,18 @@ import {
 	getMaterialFolderIcon,
 } from "file-extension-icon-js";
 import {
+	BotIcon,
 	ChevronRightIcon,
 	CloudIcon,
 	LaptopIcon,
 	ListIcon,
 	ListTreeIcon,
 	LoaderCircleIcon,
+	MessageSquareIcon,
 	MinusIcon,
 	PlusIcon,
 	Undo2Icon,
+	WrenchIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatedShinyText } from "@/components/ui/animated-shiny-text";
@@ -25,6 +28,10 @@ import type {
 	CommitButtonState,
 	WorkspaceCommitButtonMode,
 } from "@/features/commit/button";
+import {
+	countDiffCommentsByPath,
+	DIFF_COMMENTS_CHANGED_EVENT,
+} from "@/features/editor/diff-comment-storage";
 import {
 	type ChangeRequestInfo,
 	continueWorkspaceFromTargetBranch,
@@ -65,6 +72,8 @@ type ChangesSectionProps = {
 	commitButtonMode?: WorkspaceCommitButtonMode;
 	commitButtonState?: CommitButtonState;
 	changeRequest: ChangeRequestInfo | null;
+	onReviewChanges?: (changes: InspectorFileItem[]) => void;
+	onFixReviewComments?: (changes: InspectorFileItem[]) => void;
 	/** Cold-fetch indicator owned by App; drives the git-header shimmer. */
 	forgeIsRefreshing?: boolean;
 };
@@ -83,6 +92,8 @@ export function ChangesSection({
 	commitButtonMode = "create-pr",
 	commitButtonState,
 	changeRequest,
+	onReviewChanges,
+	onFixReviewComments,
 	forgeIsRefreshing = false,
 }: ChangesSectionProps) {
 	const queryClient = useQueryClient();
@@ -169,6 +180,40 @@ export function ChangesSection({
 	const hasUncommittedChanges =
 		stagedChanges.length > 0 || unstagedChanges.length > 0;
 	const hasChanges = hasUncommittedChanges || committedChanges.length > 0;
+	const [commentCountsByPath, setCommentCountsByPath] = useState<
+		Record<string, number>
+	>({});
+	const [blockingCommentCountsByPath, setBlockingCommentCountsByPath] =
+		useState<Record<string, number>>({});
+	const totalBlockingCommentCount = useMemo(
+		() =>
+			Object.values(blockingCommentCountsByPath).reduce(
+				(total, count) => total + count,
+				0,
+			),
+		[blockingCommentCountsByPath],
+	);
+	useEffect(() => {
+		const refresh = () => {
+			setCommentCountsByPath(
+				countDiffCommentsByPath({
+					workspaceRootPath,
+					paths: changes,
+				}),
+			);
+			setBlockingCommentCountsByPath(
+				countDiffCommentsByPath({
+					workspaceRootPath,
+					paths: changes,
+					onlyBlocking: true,
+				}),
+			);
+		};
+		refresh();
+		window.addEventListener(DIFF_COMMENTS_CHANGED_EVENT, refresh);
+		return () =>
+			window.removeEventListener(DIFF_COMMENTS_CHANGED_EVENT, refresh);
+	}, [changes, workspaceRootPath]);
 	const invalidateChanges = useCallback(() => {
 		if (!workspaceRootPath) {
 			return;
@@ -360,6 +405,48 @@ export function ChangesSection({
 				onCommit={handleCommitButtonClick}
 				onContinueWorkspace={handleContinueWorkspace}
 			/>
+			{hasChanges && (onReviewChanges || onFixReviewComments) && (
+				<div className="flex items-center gap-1 border-b border-border/50 bg-sidebar px-2 py-1">
+					{onReviewChanges && (
+						<Button
+							type="button"
+							variant="ghost"
+							size="xs"
+							onClick={() => onReviewChanges(changes)}
+							className="gap-1.5 text-muted-foreground hover:text-foreground"
+						>
+							<BotIcon
+								data-icon="inline-start"
+								className="size-3"
+								strokeWidth={1.8}
+							/>
+							Review changes
+						</Button>
+					)}
+					{onFixReviewComments && (
+						<Button
+							type="button"
+							variant="ghost"
+							size="xs"
+							disabled={totalBlockingCommentCount === 0}
+							onClick={() => onFixReviewComments(changes)}
+							className="gap-1.5 text-muted-foreground hover:text-foreground"
+						>
+							<WrenchIcon
+								data-icon="inline-start"
+								className="size-3"
+								strokeWidth={1.8}
+							/>
+							Fix comments
+							{totalBlockingCommentCount > 0 && (
+								<span className="tabular-nums">
+									{totalBlockingCommentCount}
+								</span>
+							)}
+						</Button>
+					)}
+				</div>
+			)}
 
 			<ScrollArea
 				aria-label="Changes panel body"
@@ -383,6 +470,7 @@ export function ChangesSection({
 								activeEditorPath={activeEditorPath}
 								onOpenEditorFile={onOpenEditorFile}
 								flashingPaths={flashingPaths}
+								commentCountsByPath={commentCountsByPath}
 							/>
 						)}
 						{unstagedChanges.length > 0 && (
@@ -408,6 +496,7 @@ export function ChangesSection({
 								activeEditorPath={activeEditorPath}
 								onOpenEditorFile={onOpenEditorFile}
 								flashingPaths={flashingPaths}
+								commentCountsByPath={commentCountsByPath}
 							/>
 						)}
 					</>
@@ -427,6 +516,7 @@ export function ChangesSection({
 						activeEditorPath={activeEditorPath}
 						onOpenEditorFile={onOpenEditorFile}
 						flashingPaths={flashingPaths}
+						commentCountsByPath={commentCountsByPath}
 					/>
 				)}
 
@@ -459,6 +549,7 @@ function ChangesGroup({
 	activeEditorPath,
 	onOpenEditorFile,
 	flashingPaths,
+	commentCountsByPath,
 }: {
 	label: string;
 	icon?: React.ReactNode;
@@ -476,6 +567,7 @@ function ChangesGroup({
 	activeEditorPath?: string | null;
 	onOpenEditorFile: (path: string, options?: DiffOpenOptions) => void;
 	flashingPaths: Set<string>;
+	commentCountsByPath: Record<string, number>;
 }) {
 	return (
 		<div>
@@ -534,6 +626,7 @@ function ChangesGroup({
 							action={action}
 							onStageAction={onStageAction}
 							onDiscard={onDiscard}
+							commentCountsByPath={commentCountsByPath}
 						/>
 					) : (
 						<ChangesFlatView
@@ -545,6 +638,7 @@ function ChangesGroup({
 							action={action}
 							onStageAction={onStageAction}
 							onDiscard={onDiscard}
+							commentCountsByPath={commentCountsByPath}
 						/>
 					)}
 				</div>
@@ -566,6 +660,7 @@ function BranchDiffSection({
 	activeEditorPath,
 	onOpenEditorFile,
 	flashingPaths,
+	commentCountsByPath,
 }: {
 	targetBranch: string | null;
 	count: number;
@@ -579,6 +674,7 @@ function BranchDiffSection({
 	activeEditorPath?: string | null;
 	onOpenEditorFile: (path: string, options?: DiffOpenOptions) => void;
 	flashingPaths: Set<string>;
+	commentCountsByPath: Record<string, number>;
 }) {
 	const handleOpenFile = useCallback(
 		(path: string, options?: DiffOpenOptions) => {
@@ -646,6 +742,7 @@ function BranchDiffSection({
 							activeEditorPath={activeEditorPath}
 							onOpenEditorFile={handleOpenFile}
 							flashingPaths={flashingPaths}
+							commentCountsByPath={commentCountsByPath}
 						/>
 					) : (
 						<ChangesFlatView
@@ -654,6 +751,7 @@ function BranchDiffSection({
 							activeEditorPath={activeEditorPath}
 							onOpenEditorFile={handleOpenFile}
 							flashingPaths={flashingPaths}
+							commentCountsByPath={commentCountsByPath}
 						/>
 					)}
 				</div>
@@ -706,6 +804,7 @@ function ChangesTreeView({
 	action,
 	onStageAction,
 	onDiscard,
+	commentCountsByPath,
 }: {
 	changes: InspectorFileItem[];
 	editorMode: boolean;
@@ -715,6 +814,7 @@ function ChangesTreeView({
 	action?: StageActionKind;
 	onStageAction?: (path: string) => void;
 	onDiscard?: (path: string) => void;
+	commentCountsByPath: Record<string, number>;
 }) {
 	const tree = buildTree(changes);
 	const [expanded, setExpanded] = useState<Set<string>>(
@@ -747,6 +847,7 @@ function ChangesTreeView({
 				action={action}
 				onStageAction={onStageAction}
 				onDiscard={onDiscard}
+				commentCountsByPath={commentCountsByPath}
 			/>
 		</div>
 	);
@@ -775,6 +876,7 @@ function TreeNodeList({
 	action,
 	onStageAction,
 	onDiscard,
+	commentCountsByPath,
 }: {
 	nodes: Map<string, ReturnType<typeof buildTree>>;
 	expanded: Set<string>;
@@ -787,6 +889,7 @@ function TreeNodeList({
 	action?: StageActionKind;
 	onStageAction?: (path: string) => void;
 	onDiscard?: (path: string) => void;
+	commentCountsByPath: Record<string, number>;
 }) {
 	const sorted = [...nodes.values()].sort((left, right) => {
 		const leftIsFolder = left.children.size > 0 && !left.file;
@@ -846,6 +949,7 @@ function TreeNodeList({
 									action={action}
 									onStageAction={onStageAction}
 									onDiscard={onDiscard}
+									commentCountsByPath={commentCountsByPath}
 								/>
 							)}
 						</div>
@@ -855,6 +959,7 @@ function TreeNodeList({
 				const file = node.file;
 				const selected = file?.absolutePath === activeEditorPath;
 				const isFlashing = !!file && flashingPaths.has(file.path);
+				const commentCount = file ? (commentCountsByPath[file.path] ?? 0) : 0;
 
 				return (
 					<div
@@ -890,6 +995,7 @@ function TreeNodeList({
 							className="size-4 shrink-0"
 						/>
 						<ShinyFlash active={isFlashing}>{node.name}</ShinyFlash>
+						{commentCount > 0 && <CommentCountBadge count={commentCount} />}
 						{file && (
 							<StageActionSlot
 								file={file}
@@ -914,6 +1020,7 @@ function ChangesFlatView({
 	action,
 	onStageAction,
 	onDiscard,
+	commentCountsByPath,
 }: {
 	changes: InspectorFileItem[];
 	editorMode: boolean;
@@ -923,6 +1030,7 @@ function ChangesFlatView({
 	action?: StageActionKind;
 	onStageAction?: (path: string) => void;
 	onDiscard?: (path: string) => void;
+	commentCountsByPath: Record<string, number>;
 }) {
 	const hasStage = !!action && !!onStageAction;
 	const hasDiscard = !!onDiscard;
@@ -966,6 +1074,9 @@ function ChangesFlatView({
 							{change.name}
 						</ShinyFlash>
 					</span>
+					{(commentCountsByPath[change.path] ?? 0) > 0 && (
+						<CommentCountBadge count={commentCountsByPath[change.path] ?? 0} />
+					)}
 					<span
 						className={cn(
 							"min-w-0 flex-1 truncate text-right text-[10px] text-muted-foreground",
@@ -1006,6 +1117,15 @@ function ChangesFlatView({
 				</div>
 			))}
 		</div>
+	);
+}
+
+function CommentCountBadge({ count }: { count: number }) {
+	return (
+		<span className="inline-flex h-4 shrink-0 items-center gap-0.5 rounded-full border border-border/70 bg-background/70 px-1 text-[9.5px] font-medium tabular-nums text-muted-foreground">
+			<MessageSquareIcon className="size-2.5" strokeWidth={1.8} />
+			{count}
+		</span>
 	);
 }
 

@@ -35,15 +35,18 @@ export function buildDiffCommentAiPrompt(
 	const pathLabel = describeEditorPath(context.path, context.workspaceRootPath);
 	const sideLabel =
 		context.target.side === "original" ? "Original" : "Modified";
+	const anchorLabel = formatTargetLabel(context.target);
 	const question =
 		stripHelmorMention(context.questionBody) || context.questionBody;
 	const originalSnippet = formatSnippet(
 		context.originalText,
 		context.target.lineNumber,
+		context.target.endLineNumber,
 	);
 	const modifiedSnippet = formatSnippet(
 		context.modifiedText,
 		context.target.lineNumber,
+		context.target.endLineNumber,
 	);
 
 	return [
@@ -53,7 +56,7 @@ export function buildDiffCommentAiPrompt(
 		"",
 		"Diff target:",
 		`- File: ${pathLabel}`,
-		`- Anchor: ${sideLabel} line ${context.target.lineNumber}`,
+		`- Anchor: ${sideLabel} ${anchorLabel}`,
 		`- Original ref: ${context.originalRef ?? "HEAD"}`,
 		`- Modified ref: ${context.modifiedRef ?? "working tree"}`,
 		"",
@@ -129,14 +132,25 @@ function formatReplyAuthor(reply: DiffCommentReply): string {
 	return reply.author === "helmor" ? "Helmor" : "User";
 }
 
-function formatSnippet(text: string | undefined, lineNumber: number): string {
+function formatTargetLabel(target: DiffLineTarget): string {
+	if (target.endLineNumber && target.endLineNumber > target.lineNumber) {
+		return `lines ${target.lineNumber}-${target.endLineNumber}`;
+	}
+	return `line ${target.lineNumber}`;
+}
+
+function formatSnippet(
+	text: string | undefined,
+	lineNumber: number,
+	endLineNumber?: number,
+): string {
 	if (!text) {
 		return "";
 	}
 
 	const lines = text.split(/\r?\n/);
 	const startLine = Math.max(1, lineNumber - 12);
-	const endLine = Math.min(lines.length, lineNumber + 12);
+	const endLine = Math.min(lines.length, (endLineNumber ?? lineNumber) + 12);
 	return lines
 		.slice(startLine - 1, endLine)
 		.map((line, index) => {

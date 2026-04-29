@@ -13,6 +13,7 @@ import {
 import { memo, useEffect, useState } from "react";
 import { ModelIcon } from "@/components/model-icon";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	DropdownMenu,
@@ -34,6 +35,7 @@ import {
 	SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
 	Tooltip,
@@ -76,6 +78,7 @@ export type SettingsSection =
 	| "appearance"
 	| "model"
 	| "git"
+	| "review"
 	| "experimental"
 	| "import"
 	| "developer"
@@ -90,6 +93,9 @@ function sidebarSectionLabel(
 		const repoId = section.slice(5);
 		return repos.find((r) => r.id === repoId)?.name ?? "Repository";
 	}
+	if (section === "review") {
+		return "Review";
+	}
 	return section.charAt(0).toUpperCase() + section.slice(1);
 }
 
@@ -97,6 +103,9 @@ function titleSectionLabel(
 	section: SettingsSection,
 	repos: RepositoryCreateOption[],
 ): string {
+	if (section === "review") {
+		return "Review";
+	}
 	return sidebarSectionLabel(section, repos);
 }
 
@@ -192,6 +201,7 @@ export const SettingsDialog = memo(function SettingsDialog({
 		"model",
 		"shortcuts",
 		"git",
+		"review",
 		"experimental",
 		...(conductorEnabled ? (["import"] as const) : []),
 		...(isDev ? (["developer"] as const) : []),
@@ -706,6 +716,69 @@ export const SettingsDialog = memo(function SettingsDialog({
 									</SettingsGroup>
 									<CliInstallPanel />
 								</div>
+							)}
+
+							{activeSection === "review" && (
+								<SettingsGroup>
+									<div className="flex items-center gap-2 py-5">
+										<div className="min-w-0 flex-1">
+											<div className="flex items-center gap-2">
+												<div className="text-[13px] font-medium leading-snug text-foreground">
+													Review summaries
+												</div>
+												<span className="rounded-full border border-border/70 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-muted-foreground">
+													Experimental
+												</span>
+											</div>
+											<div className="mt-1 text-[12px] leading-snug text-muted-foreground">
+												Customize how the AI summarizes file diffs. The review
+												panel auto-renders structured summaries, Mermaid, HTML,
+												or Markdown based on what your prompt asks for.
+											</div>
+										</div>
+									</div>
+									<div className="space-y-3 py-5">
+										<div>
+											<div className="text-[13px] font-medium leading-snug text-foreground">
+												Default summary prompt
+											</div>
+											<div className="mt-1 text-[12px] leading-snug text-muted-foreground">
+												Used by the Summarize button unless you override it for
+												a single file.
+											</div>
+										</div>
+										<Field orientation="horizontal" className="gap-2">
+											<Checkbox
+												id="review-summary-prompt-overwrite"
+												checked={settings.reviewSummaryPromptOverwrite}
+												onCheckedChange={(checked) =>
+													updateSettings({
+														reviewSummaryPromptOverwrite: checked === true,
+													})
+												}
+											/>
+											<FieldContent>
+												<FieldLabel
+													htmlFor="review-summary-prompt-overwrite"
+													className="text-[12px] font-normal text-muted-foreground"
+												>
+													Overwrite the default prompt instead of appending
+													these preferences.
+												</FieldLabel>
+											</FieldContent>
+										</Field>
+										<Textarea
+											value={settings.reviewSummaryPrompt}
+											onChange={(event) =>
+												updateSettings({
+													reviewSummaryPrompt: event.target.value,
+												})
+											}
+											placeholder="Summarize this diff in terms of user behavior, implementation layers, and risks. If useful, include Mermaid or a small self-contained HTML report."
+											className="min-h-40 w-full resize-none bg-muted/30 text-[12px] leading-5 text-foreground placeholder:text-muted-foreground/50 md:text-[12px]"
+										/>
+									</div>
+								</SettingsGroup>
 							)}
 
 							{activeSection === "import" && <ConductorImportPanel />}

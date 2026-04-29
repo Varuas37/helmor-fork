@@ -23,7 +23,7 @@ import {
 	useAppShortcuts,
 } from "@/features/shortcuts/use-app-shortcuts";
 import type { ChangeRequestInfo } from "@/lib/api";
-import type { DiffOpenOptions } from "@/lib/editor-session";
+import type { DiffOpenOptions, InspectorFileItem } from "@/lib/editor-session";
 import { useSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 import { useWorkspaceInspectorSidebar } from "./hooks/use-inspector";
@@ -58,6 +58,8 @@ type WorkspaceInspectorSidebarProps = {
 	onOpenEditorFile(path: string, options?: DiffOpenOptions): void;
 	onOpenWorkspaceFile?: (path: string) => void;
 	onOpenMockReview?: (path: string) => void;
+	onReviewChanges?: (changes: InspectorFileItem[]) => void;
+	onFixReviewComments?: (changes: InspectorFileItem[]) => void;
 	onCommitAction?: (mode: WorkspaceCommitButtonMode) => Promise<void>;
 	currentSessionId?: string | null;
 	onQueuePendingPromptForSession?: (request: {
@@ -89,6 +91,8 @@ export function WorkspaceInspectorSidebar({
 	activeEditorPath,
 	onOpenEditorFile,
 	onOpenWorkspaceFile,
+	onReviewChanges,
+	onFixReviewComments,
 	onCommitAction,
 	currentSessionId,
 	onQueuePendingPromptForSession,
@@ -441,6 +445,8 @@ export function WorkspaceInspectorSidebar({
 								commitButtonMode={commitButtonMode}
 								commitButtonState={commitButtonState}
 								changeRequest={changeRequest ?? null}
+								onReviewChanges={onReviewChanges}
+								onFixReviewComments={onFixReviewComments}
 								forgeIsRefreshing={forgeIsRefreshing}
 							/>
 

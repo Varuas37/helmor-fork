@@ -176,7 +176,9 @@ export async function startDiffCommentAiReply({
 	}
 }
 
-async function resolveDiffCommentAgentModel(settings: AppSettings): Promise<{
+export async function resolveDiffCommentAgentModel(
+	settings: AppSettings,
+): Promise<{
 	provider: AgentProvider;
 	modelId: string;
 	effortLevel: string;

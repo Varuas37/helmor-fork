@@ -1,4 +1,5 @@
 import {
+	FlagIcon,
 	MessageSquareIcon,
 	PencilIcon,
 	ReplyIcon,
@@ -7,6 +8,7 @@ import {
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import type { DiffLineAnchor } from "@/lib/monaco-runtime";
+import { cn } from "@/lib/utils";
 import {
 	DiffCommentForm,
 	DiffCommentMarkdown,
@@ -31,6 +33,7 @@ type DiffCommentLayerProps = {
 	onEditReply: (comment: DiffComment, reply: DiffCommentReply) => void;
 	onReply: (comment: DiffComment) => void;
 	onSubmitComposer: () => void;
+	onToggleBlocking: (id: string) => void;
 };
 
 export function DiffCommentLayer({
@@ -45,6 +48,7 @@ export function DiffCommentLayer({
 	onEditReply,
 	onReply,
 	onSubmitComposer,
+	onToggleBlocking,
 }: DiffCommentLayerProps) {
 	const groupedComments = useMemo(
 		() => groupCommentsByLine(comments),
@@ -77,16 +81,21 @@ export function DiffCommentLayer({
 				return (
 					<div
 						key={lineKey}
-						className="pointer-events-auto absolute max-w-[42rem]"
+						className="pointer-events-auto absolute max-w-none"
 						style={{
-							left: anchor.left,
-							right: anchor.right,
+							left: 72,
+							right: 24,
 							top: anchor.top + anchor.lineHeight + 3,
+							maxHeight: `min(520px, calc(100% - ${
+								anchor.top + anchor.lineHeight + 12
+							}px))`,
 						}}
 						onClick={(event) => event.stopPropagation()}
 						onKeyDown={(event) => event.stopPropagation()}
+						onTouchMove={(event) => event.stopPropagation()}
+						onWheel={(event) => event.stopPropagation()}
 					>
-						<div className="space-y-1.5">
+						<div className="max-h-[inherit] space-y-1.5 overflow-y-auto overscroll-contain pr-1">
 							{lineComments.map((comment) => (
 								<SavedDiffComment
 									key={comment.id}
@@ -102,6 +111,7 @@ export function DiffCommentLayer({
 									onEditReply={(reply) => onEditReply(comment, reply)}
 									onReply={() => onReply(comment)}
 									onSubmitComposer={onSubmitComposer}
+									onToggleBlocking={() => onToggleBlocking(comment.id)}
 								/>
 							))}
 							{composerForLine?.kind === "new" && (
@@ -131,6 +141,7 @@ function SavedDiffComment({
 	onEditReply,
 	onReply,
 	onSubmitComposer,
+	onToggleBlocking,
 }: {
 	comment: DiffComment;
 	composer: DiffCommentComposer | null;
@@ -142,6 +153,7 @@ function SavedDiffComment({
 	onEditReply: (reply: DiffCommentReply) => void;
 	onReply: () => void;
 	onSubmitComposer: () => void;
+	onToggleBlocking: () => void;
 }) {
 	const editRootComposer =
 		composer?.kind === "edit-comment" && composer.commentId === comment.id
@@ -153,12 +165,36 @@ function SavedDiffComment({
 			: null;
 
 	return (
-		<div className="rounded-md border border-border/80 bg-popover/95 text-popover-foreground shadow-lg backdrop-blur">
-			<div className="flex items-center gap-1.5 border-b border-border/60 px-2 py-1 text-[10.5px] text-muted-foreground">
+		<div className="flex max-h-[42vh] min-h-0 flex-col overflow-hidden rounded-md border border-border/80 bg-popover/95 text-popover-foreground shadow-lg backdrop-blur">
+			<div className="flex shrink-0 items-center gap-1.5 border-b border-border/60 px-2 py-1 text-[10.5px] text-muted-foreground">
 				<MessageSquareIcon className="size-3" strokeWidth={1.8} />
 				<span className="min-w-0 flex-1 truncate">
 					{formatLineLabel(comment)}
+					{comment.author === "review-agent"
+						? ` · ${comment.authorName ?? "Review agent"}`
+						: ""}
+					{comment.blocking ? " · Blocking" : ""}
 				</span>
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon-xs"
+					aria-label={
+						comment.blocking
+							? "Unmark blocking comment"
+							: "Mark blocking comment"
+					}
+					onClick={onToggleBlocking}
+					className={cn(
+						"size-5 text-muted-foreground hover:text-foreground",
+						comment.blocking && "text-destructive hover:text-destructive",
+					)}
+				>
+					<FlagIcon
+						className={cn("size-3", comment.blocking && "fill-current")}
+						strokeWidth={1.8}
+					/>
+				</Button>
 				<Button
 					type="button"
 					variant="ghost"
@@ -181,72 +217,74 @@ function SavedDiffComment({
 				</Button>
 			</div>
 
-			<div className="px-2 py-1.5">
-				{editRootComposer ? (
-					<DiffCommentForm
-						composer={editRootComposer}
-						onCancel={onCancelComposer}
-						onChange={onChangeComposer}
-						onSave={onSubmitComposer}
-					/>
+			<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+				<div className="px-2 py-1.5">
+					{editRootComposer ? (
+						<DiffCommentForm
+							composer={editRootComposer}
+							onCancel={onCancelComposer}
+							onChange={onChangeComposer}
+							onSave={onSubmitComposer}
+						/>
+					) : (
+						<DiffCommentMarkdown body={comment.body} />
+					)}
+				</div>
+
+				{comment.replies.length > 0 && (
+					<div className="border-t border-border/50">
+						{comment.replies.map((reply) => {
+							const editReplyComposer =
+								composer?.kind === "edit-reply" &&
+								composer.commentId === comment.id &&
+								composer.replyId === reply.id
+									? composer
+									: null;
+
+							return (
+								<DiffCommentReplyItem
+									key={reply.id}
+									reply={reply}
+									editComposer={editReplyComposer}
+									onCancelComposer={onCancelComposer}
+									onChangeComposer={onChangeComposer}
+									onDeleteReply={() => onDeleteReply(reply.id)}
+									onEditReply={() => onEditReply(reply)}
+									onSubmitComposer={onSubmitComposer}
+								/>
+							);
+						})}
+					</div>
+				)}
+
+				{replyComposer ? (
+					<div className="border-t border-border/50 p-2">
+						<DiffCommentForm
+							composer={replyComposer}
+							onCancel={onCancelComposer}
+							onChange={onChangeComposer}
+							onSave={onSubmitComposer}
+						/>
+					</div>
 				) : (
-					<DiffCommentMarkdown body={comment.body} />
+					<div className="flex justify-end border-t border-border/50 px-2 py-1">
+						<Button
+							type="button"
+							variant="ghost"
+							size="xs"
+							onClick={onReply}
+							className="text-muted-foreground"
+						>
+							<ReplyIcon
+								data-icon="inline-start"
+								className="size-3"
+								strokeWidth={1.8}
+							/>
+							Reply
+						</Button>
+					</div>
 				)}
 			</div>
-
-			{comment.replies.length > 0 && (
-				<div className="border-t border-border/50">
-					{comment.replies.map((reply) => {
-						const editReplyComposer =
-							composer?.kind === "edit-reply" &&
-							composer.commentId === comment.id &&
-							composer.replyId === reply.id
-								? composer
-								: null;
-
-						return (
-							<DiffCommentReplyItem
-								key={reply.id}
-								reply={reply}
-								editComposer={editReplyComposer}
-								onCancelComposer={onCancelComposer}
-								onChangeComposer={onChangeComposer}
-								onDeleteReply={() => onDeleteReply(reply.id)}
-								onEditReply={() => onEditReply(reply)}
-								onSubmitComposer={onSubmitComposer}
-							/>
-						);
-					})}
-				</div>
-			)}
-
-			{replyComposer ? (
-				<div className="border-t border-border/50 p-2">
-					<DiffCommentForm
-						composer={replyComposer}
-						onCancel={onCancelComposer}
-						onChange={onChangeComposer}
-						onSave={onSubmitComposer}
-					/>
-				</div>
-			) : (
-				<div className="flex justify-end border-t border-border/50 px-2 py-1">
-					<Button
-						type="button"
-						variant="ghost"
-						size="xs"
-						onClick={onReply}
-						className="text-muted-foreground"
-					>
-						<ReplyIcon
-							data-icon="inline-start"
-							className="size-3"
-							strokeWidth={1.8}
-						/>
-						Reply
-					</Button>
-				</div>
-			)}
 		</div>
 	);
 }

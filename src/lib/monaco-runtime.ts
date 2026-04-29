@@ -29,6 +29,7 @@ export type DiffLineSide = "original" | "modified";
 export type DiffLineTarget = {
 	side: DiffLineSide;
 	lineNumber: number;
+	endLineNumber?: number;
 };
 
 export type DiffLineAnchor = DiffLineTarget & {
@@ -395,7 +396,12 @@ function watchDiffLineClicks({
 			return;
 		}
 
-		callback({ side, lineNumber: position.lineNumber });
+		const selectedRange = getSelectedLineRange(editor, position.lineNumber);
+		callback({
+			side,
+			lineNumber: selectedRange?.startLineNumber ?? position.lineNumber,
+			endLineNumber: selectedRange?.endLineNumber,
+		});
 	});
 }
 
@@ -404,13 +410,35 @@ function isCommentableLineTarget(
 	targetType: Monaco.editor.MouseTargetType,
 ) {
 	const mouseTargetType = monaco.editor.MouseTargetType;
-	return (
-		targetType === mouseTargetType.CONTENT_EMPTY ||
-		targetType === mouseTargetType.CONTENT_TEXT ||
-		targetType === mouseTargetType.GUTTER_GLYPH_MARGIN ||
-		targetType === mouseTargetType.GUTTER_LINE_DECORATIONS ||
-		targetType === mouseTargetType.GUTTER_LINE_NUMBERS
+	return targetType === mouseTargetType.GUTTER_LINE_NUMBERS;
+}
+
+function getSelectedLineRange(
+	editor: StandaloneEditor,
+	clickedLineNumber: number,
+): { startLineNumber: number; endLineNumber: number } | null {
+	const selection = editor.getSelection();
+	if (!selection || selection.isEmpty()) {
+		return null;
+	}
+
+	const startLineNumber = Math.min(
+		selection.startLineNumber,
+		selection.endLineNumber,
 	);
+	const endLineNumber = Math.max(
+		selection.startLineNumber,
+		selection.endLineNumber,
+	);
+	if (
+		startLineNumber === endLineNumber ||
+		clickedLineNumber < startLineNumber ||
+		clickedLineNumber > endLineNumber
+	) {
+		return null;
+	}
+
+	return { startLineNumber, endLineNumber };
 }
 
 function getDiffLineAnchor({

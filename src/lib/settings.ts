@@ -36,6 +36,8 @@ export type AppSettings = {
 	followUpBehavior: FollowUpBehavior;
 	mainlineDiffEnabled: boolean;
 	mainlineDiffBaseRef: string;
+	reviewSummaryPrompt: string;
+	reviewSummaryPromptOverwrite: boolean;
 	/** Force the context-usage ring to always be visible. When false (the
 	 *  default), the ring auto-hides until usage crosses
 	 *  `CONTEXT_USAGE_AUTO_REVEAL_THRESHOLD`. */
@@ -69,6 +71,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	followUpBehavior: "steer",
 	mainlineDiffEnabled: true,
 	mainlineDiffBaseRef: "origin/HEAD",
+	reviewSummaryPrompt: "",
+	reviewSummaryPromptOverwrite: false,
 	alwaysShowContextUsage: true,
 	showUsageStats: true,
 	onboardingCompleted: false,
@@ -99,6 +103,8 @@ const SETTINGS_KEY_MAP: Record<Exclude<keyof AppSettings, "theme">, string> = {
 	followUpBehavior: "app.follow_up_behavior",
 	mainlineDiffEnabled: "app.mainline_diff_enabled",
 	mainlineDiffBaseRef: "app.mainline_diff_base_ref",
+	reviewSummaryPrompt: "app.review_summary_prompt",
+	reviewSummaryPromptOverwrite: "app.review_summary_prompt_overwrite",
 	alwaysShowContextUsage: "app.always_show_context_usage",
 	showUsageStats: "app.show_usage_stats",
 	onboardingCompleted: "app.onboarding_completed",
@@ -211,6 +217,13 @@ export async function loadSettings(): Promise<AppSettings> {
 			mainlineDiffBaseRef:
 				raw[SETTINGS_KEY_MAP.mainlineDiffBaseRef]?.trim() ||
 				DEFAULT_SETTINGS.mainlineDiffBaseRef,
+			reviewSummaryPrompt:
+				raw[SETTINGS_KEY_MAP.reviewSummaryPrompt] ??
+				DEFAULT_SETTINGS.reviewSummaryPrompt,
+			reviewSummaryPromptOverwrite:
+				raw[SETTINGS_KEY_MAP.reviewSummaryPromptOverwrite] !== undefined
+					? raw[SETTINGS_KEY_MAP.reviewSummaryPromptOverwrite] === "true"
+					: DEFAULT_SETTINGS.reviewSummaryPromptOverwrite,
 			alwaysShowContextUsage:
 				raw[SETTINGS_KEY_MAP.alwaysShowContextUsage] !== undefined
 					? raw[SETTINGS_KEY_MAP.alwaysShowContextUsage] === "true"

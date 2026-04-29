@@ -76,7 +76,12 @@ export function hasDiffCommentOnLine(
 	target: DiffLineTarget,
 ): boolean {
 	return comments.some(
-		(comment) =>
-			comment.side === target.side && comment.lineNumber === target.lineNumber,
+		(comment) => comment.side === target.side && rangesOverlap(comment, target),
 	);
+}
+
+function rangesOverlap(left: DiffLineTarget, right: DiffLineTarget): boolean {
+	const leftEnd = left.endLineNumber ?? left.lineNumber;
+	const rightEnd = right.endLineNumber ?? right.lineNumber;
+	return left.lineNumber <= rightEnd && right.lineNumber <= leftEnd;
 }
