@@ -58,6 +58,14 @@ export function parseReviewAgentActionBlock(
 	};
 }
 
+export function stripReviewAgentActionBlocks(markdown: string): string {
+	return removeTrailingUnclosedReviewFence(
+		markdown.replace(reviewCommentFencePattern(), ""),
+	)
+		.replace(reviewCommentMarkerPattern(), "")
+		.trim();
+}
+
 function readBeforeAfter(value: unknown): ReviewBeforeAfterRow[] {
 	if (!Array.isArray(value)) {
 		return [];
@@ -88,6 +96,11 @@ function parseTaggedJson(markdown: string, tag: string): unknown {
 	const taggedMatch = markdown.match(taggedPattern);
 	if (taggedMatch?.[1]) {
 		return parseJsonLoose(taggedMatch[1]);
+	}
+
+	const unfencedTaggedBlock = readUnfencedTaggedBlock(markdown, tag);
+	if (unfencedTaggedBlock) {
+		return parseJsonLoose(unfencedTaggedBlock);
 	}
 
 	const jsonPattern = /```json\s*([\s\S]*?)```/i;
@@ -140,21 +153,46 @@ function readReviewAgentComment(value: unknown): ReviewAgentComment[] {
 	}
 
 	const severity = candidate.severity;
+	const normalizedSeverity = normalizeReviewSeverity(severity);
 	return [
 		{
 			filePath,
 			side,
 			lineNumber,
 			body,
-			severity:
-				severity === "info" ||
-				severity === "suggestion" ||
-				severity === "warning" ||
-				severity === "blocking"
-					? severity
-					: undefined,
+			severity: normalizedSeverity,
 		},
 	];
+}
+
+function normalizeReviewSeverity(
+	severity: unknown,
+): ReviewAgentComment["severity"] {
+	if (typeof severity !== "string") {
+		return undefined;
+	}
+
+	switch (severity.trim().toLowerCase()) {
+		case "high":
+		case "critical":
+		case "error":
+		case "blocker":
+		case "blocking":
+			return "blocking";
+		case "warn":
+		case "warning":
+		case "medium":
+			return "warning";
+		case "suggestion":
+		case "suggest":
+		case "low":
+			return "suggestion";
+		case "info":
+		case "note":
+			return "info";
+		default:
+			return undefined;
+	}
 }
 
 function readLayers(value: unknown): ReviewLayerSummary[] {
@@ -215,6 +253,27 @@ function readStringArray(value: unknown): string[] {
 
 function readString(value: unknown): string {
 	return typeof value === "string" ? value.trim() : "";
+}
+
+function readUnfencedTaggedBlock(markdown: string, tag: string): string {
+	const escapedTag = escapeRegExp(tag);
+	const pattern = new RegExp(`^\\s*${escapedTag}\\s*\\r?\\n([\\s\\S]*)$`, "im");
+	return markdown.match(pattern)?.[1]?.trim() ?? "";
+}
+
+function reviewCommentFencePattern(): RegExp {
+	return /```[ \t]*helmor_review_comments[^\r\n]*(?:\r?\n[\s\S]*?)(?:\r?\n)?```/gi;
+}
+
+function removeTrailingUnclosedReviewFence(markdown: string): string {
+	return markdown.replace(
+		/```[ \t]*helmor_review_comments[^\r\n]*(?:\r?\n[\s\S]*)?$/i,
+		"",
+	);
+}
+
+function reviewCommentMarkerPattern(): RegExp {
+	return /^\s*helmor_review_comments\s*\r?\n[\s\S]*$/im;
 }
 
 function escapeRegExp(value: string): string {

@@ -172,6 +172,43 @@ describe("extractLiveActivity", () => {
 		expect(blocks[0]).toMatchObject({ kind: "tool", label: "$ ls" });
 	});
 
+	it("hides review-agent action JSON from live activity", () => {
+		const blocks = extractLiveActivity([
+			makeAssistant([
+				{
+					type: "text",
+					id: "review",
+					text: [
+						"Review complete.",
+						"",
+						"```helmor_review_comments",
+						JSON.stringify({
+							comments: [
+								{
+									filePath: "src/App.tsx",
+									side: "modified",
+									lineNumber: 12,
+									severity: "high",
+									body: "Hidden action.",
+								},
+							],
+						}),
+						"```",
+					].join("\n"),
+				},
+			]),
+		]);
+
+		expect(blocks).toEqual([
+			{
+				kind: "markdown",
+				key: "review",
+				text: "Review complete.",
+				reasoning: false,
+			},
+		]);
+	});
+
 	it("truncates long markdown text in-place", () => {
 		const long = "y".repeat(LIVE_BLOCK_CHAR_BUDGET + 50);
 		const [block] = extractLiveActivity([

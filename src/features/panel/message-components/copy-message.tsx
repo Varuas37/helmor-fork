@@ -1,6 +1,7 @@
 import { Check, Copy } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { stripReviewAgentActionBlocks } from "@/features/review-changes/parser";
 import type {
 	CollapsedGroupPart,
 	ExtendedMessagePart,
@@ -15,7 +16,7 @@ import type {
 } from "@/lib/api";
 
 function serializeTextPart(part: TextPart): string | null {
-	const text = part.text.trim();
+	const text = stripReviewAgentActionBlocks(part.text);
 	return text.length > 0 ? text : null;
 }
 

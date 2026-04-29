@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseFileReviewSummary, parseReviewAgentActionBlock } from "./parser";
+import {
+	parseFileReviewSummary,
+	parseReviewAgentActionBlock,
+	stripReviewAgentActionBlocks,
+} from "./parser";
 
 describe("review changes parser", () => {
 	it("parses structured file summaries", () => {
@@ -83,5 +87,49 @@ describe("review changes parser", () => {
 				body: "Consider extracting this state.",
 			},
 		]);
+	});
+
+	it("normalizes high review severity into blocking comments", () => {
+		const block = parseReviewAgentActionBlock(
+			[
+				"```HELMOR_REVIEW_COMMENTS",
+				JSON.stringify({
+					comments: [
+						{
+							filePath: "src/App.tsx",
+							side: "modified",
+							lineNumber: 42,
+							severity: "high",
+							body: "This should block the fix flow.",
+						},
+					],
+				}),
+				"```",
+			].join("\n"),
+		);
+
+		expect(block.comments[0]?.severity).toBe("blocking");
+	});
+
+	it("strips review action blocks from assistant display markdown", () => {
+		const markdown = [
+			"Review complete.",
+			"",
+			"```HELMOR_REVIEW_COMMENTS",
+			JSON.stringify({
+				comments: [
+					{
+						filePath: "src/App.tsx",
+						side: "modified",
+						lineNumber: 42,
+						severity: "high",
+						body: "Hidden machine-readable action.",
+					},
+				],
+			}),
+			"```",
+		].join("\n");
+
+		expect(stripReviewAgentActionBlocks(markdown)).toBe("Review complete.");
 	});
 });

@@ -19,6 +19,7 @@ import {
 	HoverCard as HoverCardRoot,
 	HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { stripReviewAgentActionBlocks } from "@/features/review-changes/parser";
 import type {
 	ExtendedMessagePart,
 	ThreadMessageLike,
@@ -230,10 +231,14 @@ export function extractLiveActivity(
 		switch (part.type) {
 			case "text":
 				if (part.text) {
+					const text = stripReviewAgentActionBlocks(part.text);
+					if (!text) {
+						break;
+					}
 					blocks.push({
 						kind: "markdown",
 						key: part.id,
-						text: truncateLiveText(part.text),
+						text: truncateLiveText(text),
 						reasoning: false,
 					});
 				}

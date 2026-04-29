@@ -6,6 +6,7 @@ import {
 	ReasoningTrigger,
 } from "@/components/ai/reasoning";
 import { LazyStreamdown } from "@/components/streamdown-loader";
+import { stripReviewAgentActionBlocks } from "@/features/review-changes/parser";
 import {
 	type ExtendedMessagePart,
 	partKey,
@@ -46,6 +47,11 @@ const AssistantText = memo(function AssistantText({
 }) {
 	const mode: StreamdownMode = streaming ? "streaming" : "static";
 	const { settings } = useSettings();
+	const displayText = stripReviewAgentActionBlocks(text);
+
+	if (!displayText) {
+		return null;
+	}
 
 	return (
 		<div
@@ -60,7 +66,7 @@ const AssistantText = memo(function AssistantText({
 					isAnimating={streaming}
 					mode={mode}
 				>
-					{text}
+					{displayText}
 				</LazyStreamdown>
 			</Suspense>
 		</div>
@@ -68,9 +74,14 @@ const AssistantText = memo(function AssistantText({
 });
 
 function AssistantTextFallback({ text }: { text: string }) {
+	const displayText = stripReviewAgentActionBlocks(text);
+	if (!displayText) {
+		return null;
+	}
+
 	return (
 		<div className="conversation-streamdown whitespace-pre-wrap break-words">
-			{text}
+			{displayText}
 		</div>
 	);
 }

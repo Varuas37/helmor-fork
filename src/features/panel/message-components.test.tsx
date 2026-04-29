@@ -134,6 +134,52 @@ describe("MemoConversationMessage plan review", () => {
 		);
 	});
 
+	it("hides review-agent action JSON from assistant messages and copy output", () => {
+		const message: ThreadMessageLike = {
+			id: "assistant-review-actions",
+			role: "assistant",
+			createdAt: "2026-04-29T12:00:00.000Z",
+			content: [
+				{
+					type: "text",
+					id: "assistant-review-actions:text",
+					text: [
+						"Review complete.",
+						"",
+						"```HELMOR_REVIEW_COMMENTS",
+						JSON.stringify({
+							comments: [
+								{
+									filePath: "src/App.tsx",
+									side: "modified",
+									lineNumber: 42,
+									severity: "high",
+									body: "Hidden machine action.",
+								},
+							],
+						}),
+						"```",
+					].join("\n"),
+				},
+			],
+		};
+
+		render(
+			<MemoConversationMessage
+				message={message}
+				sessionId="session-1"
+				itemIndex={0}
+			/>,
+		);
+
+		expect(screen.getByText("Review complete.")).toBeInTheDocument();
+		expect(
+			screen.queryByText(/HELMOR_REVIEW_COMMENTS/),
+		).not.toBeInTheDocument();
+		expect(screen.queryByText(/Hidden machine action/)).not.toBeInTheDocument();
+		expect(serializeMessageForClipboard(message)).toBe("Review complete.");
+	});
+
 	it("serializes system content without timestamps", () => {
 		const message: ThreadMessageLike = {
 			id: "system-copy-1",
