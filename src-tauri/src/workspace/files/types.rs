@@ -55,3 +55,31 @@ pub struct EditorFilesWithContentResponse {
     pub items: Vec<EditorFileListItem>,
     pub prefetched: Vec<EditorFilePrefetchItem>,
 }
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceDiffRefItem {
+    pub name: String,
+    pub kind: String,
+    pub is_default: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditorFileChangeHunk {
+    pub new_start: u32,
+    pub new_lines: u32,
+    pub old_start: u32,
+    pub old_lines: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub old_text: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditorFileChangeHunksResponse {
+    pub base_ref: String,
+    pub resolved_ref: String,
+    pub base_commit: String,
+    pub hunks: Vec<EditorFileChangeHunk>,
+}

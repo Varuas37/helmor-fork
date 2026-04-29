@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
 import {
 	type MutableRefObject,
 	useCallback,
@@ -10,9 +10,18 @@ import {
 } from "react";
 import { TrafficLightSpacer } from "@/components/chrome/traffic-light-spacer";
 import { Button } from "@/components/ui/button";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ShortcutDisplay } from "@/features/shortcuts/shortcut-display";
 import type { EditorSessionState } from "@/lib/editor-session";
-import type { DiffLineAnchor, DiffLineTarget } from "@/lib/monaco-runtime";
+import type {
+	DiffLineAnchor,
+	DiffLineTarget,
+	EditorChangeHunk,
+} from "@/lib/monaco-runtime";
 import { useSettings } from "@/lib/settings";
 import { describeUnknownError } from "@/lib/workspace-helpers";
 import { startDiffCommentAiReply } from "./diff-comment-agent";
@@ -43,6 +52,8 @@ type WorkspaceEditorSurfaceProps = {
 	workspaceId?: string | null;
 	workspaceRootPath?: string | null;
 	onChangeSession: (session: EditorSessionState) => void;
+	onOpenExternalFile?: (path: string) => void;
+	externalEditorName?: string | null;
 	onExit: () => void;
 	onError?: (description: string, title?: string) => void;
 };
@@ -65,6 +76,8 @@ export function WorkspaceEditorSurface({
 	workspaceId,
 	workspaceRootPath,
 	onChangeSession,
+	onOpenExternalFile,
+	externalEditorName,
 	onExit,
 	onError,
 }: WorkspaceEditorSurfaceProps) {
@@ -84,6 +97,7 @@ export function WorkspaceEditorSurface({
 	const [surfaceStatus, setSurfaceStatus] = useState<SurfaceStatus>({
 		kind: "ready",
 	});
+	const [fileControllerVersion, setFileControllerVersion] = useState(0);
 	const [diffControllerVersion, setDiffControllerVersion] = useState(0);
 	const [diffComments, setDiffComments] = useState<DiffComment[]>([]);
 	const [diffCommentComposer, setDiffCommentComposer] =
@@ -106,6 +120,9 @@ export function WorkspaceEditorSurface({
 		editorSession.modifiedText !== undefined;
 	const closeLabel =
 		editorSession.kind === "diff" ? "Close diff view" : "Close editor view";
+	const openExternalLabel = externalEditorName
+		? `Open file in ${externalEditorName}`
+		: "Open file in external editor";
 	const diffCommentScope = useMemo<DiffCommentScope | null>(() => {
 		if (editorSession.kind !== "diff") {
 			return null;
@@ -517,6 +534,7 @@ export function WorkspaceEditorSurface({
 			);
 
 			if (switched) {
+				setFileControllerVersion((version) => version + 1);
 				// Sync parent state from cached model when content wasn't in state yet
 				if (content === undefined) {
 					const cachedContent = fileControllerRef.current.getValue();
@@ -582,6 +600,7 @@ export function WorkspaceEditorSurface({
 						path: editorSession.path,
 						content:
 							editorSession.modifiedText ?? editorSession.originalText ?? "",
+						workspaceRootPath,
 						line: editorSession.line,
 						column: editorSession.column,
 					});
@@ -592,6 +611,7 @@ export function WorkspaceEditorSurface({
 					}
 
 					fileControllerRef.current = controller;
+					setFileControllerVersion((version) => version + 1);
 					changeSubscriptionRef.current = controller.onDidChangeModelContent(
 						(value) => {
 							if (applyValueRef.current) {
@@ -633,6 +653,7 @@ export function WorkspaceEditorSurface({
 						originalText: editorSession.originalText ?? "",
 						modifiedText: editorSession.modifiedText ?? "",
 						inline: Boolean(editorSession.inline),
+						workspaceRootPath,
 					});
 
 					if (disposed || requestId !== buildRequestIdRef.current) {
@@ -692,6 +713,67 @@ export function WorkspaceEditorSurface({
 	}, [editorSession.column, editorSession.kind, editorSession.line]);
 
 	useEffect(() => {
+		if (editorSession.kind !== "file") {
+			fileControllerRef.current?.setChangeHunks([]);
+			return;
+		}
+
+		const controller = fileControllerRef.current;
+		if (!controller) {
+			return;
+		}
+
+		if (
+			!settings.mainlineDiffEnabled ||
+			!workspaceRootPath ||
+			!editorSession.path
+		) {
+			controller.setChangeHunks([]);
+			return;
+		}
+
+		let cancelled = false;
+		const baseRef = settings.mainlineDiffBaseRef.trim() || "origin/HEAD";
+		controller.setChangeHunks([]);
+
+		void (async () => {
+			try {
+				const api = await import("@/lib/api");
+				const response = await api.getEditorFileChangeHunks(
+					workspaceRootPath,
+					editorSession.path,
+					baseRef,
+				);
+				if (cancelled || fileControllerRef.current !== controller) {
+					return;
+				}
+				const hunks: EditorChangeHunk[] = response.hunks;
+				controller.setChangeHunks(hunks);
+			} catch (error) {
+				if (cancelled) {
+					return;
+				}
+				controller.setChangeHunks([]);
+				onErrorRef.current?.(
+					describeUnknownError(error, "Unable to load file change highlights."),
+					"Change highlights unavailable",
+				);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		editorSession.kind,
+		editorSession.path,
+		fileControllerVersion,
+		settings.mainlineDiffBaseRef,
+		settings.mainlineDiffEnabled,
+		workspaceRootPath,
+	]);
+
+	useEffect(() => {
 		if (
 			editorSession.kind !== "diff" ||
 			!diffControllerRef.current ||
@@ -731,6 +813,29 @@ export function WorkspaceEditorSurface({
 				<div className="min-w-0 flex-1" data-tauri-drag-region />
 
 				<div className="flex shrink-0 items-center pr-2">
+					{editorSession.kind === "file" && onOpenExternalFile ? (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-sm"
+									onClick={() => onOpenExternalFile(editorSession.path)}
+									aria-label={openExternalLabel}
+									className="text-muted-foreground hover:text-foreground"
+								>
+									<ExternalLink className="size-3.5" strokeWidth={1.8} />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent
+								side="bottom"
+								sideOffset={4}
+								className="flex h-[24px] items-center rounded-md px-2 text-[12px] leading-none"
+							>
+								{openExternalLabel}
+							</TooltipContent>
+						</Tooltip>
+					) : null}
 					<Button
 						type="button"
 						variant="ghost"

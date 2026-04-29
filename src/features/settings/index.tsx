@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getMaterialFileIcon } from "file-extension-icon-js";
 import {
 	ChevronDown,
+	FileText,
 	Minus,
 	Monitor,
 	Moon,
@@ -49,8 +51,9 @@ import {
 	agentModelSectionsQueryOptions,
 	helmorQueryKeys,
 	repositoriesQueryOptions,
+	workspaceDiffRefsQueryOptions,
 } from "@/lib/query-client";
-import type { ThemeMode } from "@/lib/settings";
+import type { FileIconPack, ThemeMode } from "@/lib/settings";
 import { useSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 import { clampEffort, findModelOption } from "@/lib/workspace-helpers";
@@ -101,12 +104,14 @@ export const SettingsDialog = memo(function SettingsDialog({
 	open,
 	workspaceId,
 	workspaceRepoId,
+	workspaceRootPath,
 	initialSection,
 	onClose,
 }: {
 	open: boolean;
 	workspaceId: string | null;
 	workspaceRepoId: string | null;
+	workspaceRootPath?: string | null;
 	initialSection?: SettingsSection;
 	onClose: () => void;
 }) {
@@ -131,6 +136,10 @@ export const SettingsDialog = memo(function SettingsDialog({
 	const modelSectionsQuery = useQuery({
 		...agentModelSectionsQueryOptions(),
 		enabled: open,
+	});
+	const workspaceDiffRefsQuery = useQuery({
+		...workspaceDiffRefsQueryOptions(workspaceRootPath ?? "__missing__"),
+		enabled: open && activeSection === "experimental" && !!workspaceRootPath,
 	});
 	const allModels = (modelSectionsQuery.data ?? []).flatMap((s) => s.options);
 	const selectedDefaultModel = findModelOption(
@@ -381,6 +390,42 @@ export const SettingsDialog = memo(function SettingsDialog({
 										</ToggleGroup>
 									</SettingsRow>
 									<SettingsRow
+										title="File Icons"
+										description="Choose the icon style for workspace file trees"
+									>
+										<ToggleGroup
+											type="single"
+											value={settings.fileIconPack}
+											className="gap-1.5"
+											onValueChange={(value: string) => {
+												if (value) {
+													updateSettings({
+														fileIconPack: value as FileIconPack,
+													});
+												}
+											}}
+										>
+											<ToggleGroupItem
+												value="default"
+												className="gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium text-muted-foreground data-[state=on]:bg-accent data-[state=on]:text-foreground"
+											>
+												<FileText className="size-3.5" strokeWidth={1.8} />
+												Default
+											</ToggleGroupItem>
+											<ToggleGroupItem
+												value="material"
+												className="gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium text-muted-foreground data-[state=on]:bg-accent data-[state=on]:text-foreground"
+											>
+												<img
+													src={getMaterialFileIcon("example.ts")}
+													alt=""
+													className="size-3.5"
+												/>
+												Material
+											</ToggleGroupItem>
+										</ToggleGroup>
+									</SettingsRow>
+									<SettingsRow
 										title="Font Size"
 										description="Adjust the text size for chat messages"
 									>
@@ -583,6 +628,82 @@ export const SettingsDialog = memo(function SettingsDialog({
 
 							{activeSection === "experimental" && (
 								<div className="flex flex-col gap-3">
+									<SettingsGroup>
+										<SettingsRow
+											title="Mainline file highlights"
+											description="Highlight added or changed lines in the editor against a git branch, ref, or commit."
+										>
+											<Switch
+												checked={settings.mainlineDiffEnabled}
+												onCheckedChange={(checked) =>
+													updateSettings({ mainlineDiffEnabled: checked })
+												}
+											/>
+										</SettingsRow>
+										<SettingsRow
+											title="Diff base"
+											description="Use origin/HEAD, origin/main, a local branch, or a commit SHA."
+										>
+											<div className="flex w-[360px] min-w-0 items-center gap-2">
+												<Input
+													type="text"
+													value={settings.mainlineDiffBaseRef}
+													onChange={(event) =>
+														updateSettings({
+															mainlineDiffBaseRef: event.target.value,
+														})
+													}
+													placeholder="origin/HEAD"
+													className="h-8 min-w-0 bg-muted/30 text-[13px] text-foreground placeholder:text-muted-foreground/50"
+												/>
+												<DropdownMenu>
+													<DropdownMenuTrigger asChild>
+														<Button
+															type="button"
+															variant="outline"
+															size="sm"
+															disabled={
+																!workspaceRootPath ||
+																workspaceDiffRefsQuery.isPending ||
+																(workspaceDiffRefsQuery.data ?? []).length === 0
+															}
+															className="shrink-0 gap-1.5"
+														>
+															Refs
+															<ChevronDown
+																className="size-3 opacity-60"
+																strokeWidth={2}
+															/>
+														</Button>
+													</DropdownMenuTrigger>
+													<DropdownMenuContent
+														align="end"
+														sideOffset={4}
+														className="max-h-[260px] min-w-[14rem] overflow-y-auto"
+													>
+														{(workspaceDiffRefsQuery.data ?? []).map((item) => (
+															<DropdownMenuItem
+																key={`${item.kind}:${item.name}`}
+																onClick={() =>
+																	updateSettings({
+																		mainlineDiffBaseRef: item.name,
+																	})
+																}
+																className="gap-2"
+															>
+																<span className="min-w-0 flex-1 truncate">
+																	{item.name}
+																</span>
+																<span className="shrink-0 text-[10px] uppercase text-muted-foreground">
+																	{item.isDefault ? "default" : item.kind}
+																</span>
+															</DropdownMenuItem>
+														))}
+													</DropdownMenuContent>
+												</DropdownMenu>
+											</div>
+										</SettingsRow>
+									</SettingsGroup>
 									<CliInstallPanel />
 								</div>
 							)}

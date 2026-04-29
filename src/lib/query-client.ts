@@ -21,6 +21,7 @@ import {
 	listSlashCommands,
 	listWorkspaceCandidateDirectories,
 	listWorkspaceChangesWithContent,
+	listWorkspaceDiffRefs,
 	listWorkspaceFiles,
 	listWorkspaceLinkedDirectories,
 	loadAgentModelSections,
@@ -76,6 +77,8 @@ export const helmorQueryKeys = {
 		["workspaceChanges", workspaceRootPath] as const,
 	workspaceFiles: (workspaceRootPath: string) =>
 		["workspaceFiles", workspaceRootPath] as const,
+	workspaceDiffRefs: (workspaceRootPath: string) =>
+		["workspaceDiffRefs", workspaceRootPath] as const,
 	workspaceChangeRequest: (workspaceId: string) =>
 		["workspaceChangeRequest", workspaceId] as const,
 	workspaceForge: (workspaceId: string) =>
@@ -571,6 +574,16 @@ export function workspaceFilesQueryOptions(workspaceRootPath: string) {
 	return queryOptions({
 		queryKey: helmorQueryKeys.workspaceFiles(workspaceRootPath),
 		queryFn: () => listWorkspaceFiles(workspaceRootPath),
+		staleTime: 60_000,
+		gcTime: DEFAULT_GC_TIME,
+		retry: 0,
+	});
+}
+
+export function workspaceDiffRefsQueryOptions(workspaceRootPath: string) {
+	return queryOptions({
+		queryKey: helmorQueryKeys.workspaceDiffRefs(workspaceRootPath),
+		queryFn: () => listWorkspaceDiffRefs(workspaceRootPath),
 		staleTime: 60_000,
 		gcTime: DEFAULT_GC_TIME,
 		retry: 0,

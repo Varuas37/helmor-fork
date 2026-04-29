@@ -484,6 +484,27 @@ export type EditorFilesWithContentResponse = {
 	prefetched: EditorFilePrefetchItem[];
 };
 
+export type WorkspaceDiffRefItem = {
+	name: string;
+	kind: string;
+	isDefault: boolean;
+};
+
+export type EditorFileChangeHunk = {
+	newStart: number;
+	newLines: number;
+	oldStart: number;
+	oldLines: number;
+	oldText?: string;
+};
+
+export type EditorFileChangeHunksResponse = {
+	baseRef: string;
+	resolvedRef: string;
+	baseCommit: string;
+	hunks: EditorFileChangeHunk[];
+};
+
 export type AppUpdateStage =
 	| "disabled"
 	| "idle"
@@ -1326,6 +1347,14 @@ export async function openWorkspaceInEditor(
 	await invoke("open_workspace_in_editor", { workspaceId, editor });
 }
 
+export async function openFileInEditor(
+	workspaceId: string,
+	editor: string,
+	filePath: string,
+): Promise<void> {
+	await invoke("open_file_in_editor", { workspaceId, editor, filePath });
+}
+
 export async function openWorkspaceInFinder(
 	workspaceId: string,
 ): Promise<void> {
@@ -1416,6 +1445,41 @@ export async function listWorkspaceFiles(
 	} catch (error) {
 		throw new Error(
 			describeInvokeError(error, "Unable to list workspace files."),
+		);
+	}
+}
+
+export async function listWorkspaceDiffRefs(
+	workspaceRootPath: string,
+): Promise<WorkspaceDiffRefItem[]> {
+	try {
+		return await invoke<WorkspaceDiffRefItem[]>("list_workspace_diff_refs", {
+			workspaceRootPath,
+		});
+	} catch (error) {
+		throw new Error(
+			describeInvokeError(error, "Unable to list workspace diff refs."),
+		);
+	}
+}
+
+export async function getEditorFileChangeHunks(
+	workspaceRootPath: string,
+	filePath: string,
+	baseRef: string,
+): Promise<EditorFileChangeHunksResponse> {
+	try {
+		return await invoke<EditorFileChangeHunksResponse>(
+			"get_editor_file_change_hunks",
+			{
+				workspaceRootPath,
+				filePath,
+				baseRef,
+			},
+		);
+	} catch (error) {
+		throw new Error(
+			describeInvokeError(error, "Unable to load file change highlights."),
 		);
 	}
 }

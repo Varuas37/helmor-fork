@@ -8,9 +8,11 @@ use crate::data_dir::TEST_ENV_LOCK as TEST_LOCK;
 use crate::error::{extract_code, ErrorCode};
 
 use super::{
-    canonicalize_missing_path, list_editor_files, list_workspace_files, read_editor_file,
-    stat_editor_file, support::EditorFilesHarness, write_editor_file,
+    canonicalize_missing_path, get_editor_file_change_hunks, list_editor_files,
+    list_workspace_diff_refs, list_workspace_files, read_editor_file, stat_editor_file,
+    support::EditorFilesHarness, write_editor_file,
 };
+use crate::git_ops;
 
 #[test]
 fn read_editor_file_rejects_paths_outside_workspace_roots() {
@@ -277,4 +279,89 @@ fn list_workspace_files_returns_all_files_without_24_cap_and_skips_excluded_dirs
         .expect("expected nested widget in result");
     assert!(Path::new(&nested_match.absolute_path).is_file());
     assert_eq!(nested_match.name, "widget_00.tsx");
+}
+
+#[test]
+fn file_change_hunks_highlight_new_lines_against_selected_branch() {
+    let _lock = TEST_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    let harness = EditorFilesHarness::new();
+    init_git_repo(&harness.workspace_dir);
+    let file = harness.workspace_dir.join("src").join("App.tsx");
+
+    fs::create_dir_all(file.parent().unwrap()).unwrap();
+    fs::write(&file, "one\ntwo\nthree\n").unwrap();
+    git(&harness.workspace_dir, &["add", "."]);
+    git(&harness.workspace_dir, &["commit", "-m", "add app"]);
+    git(&harness.workspace_dir, &["checkout", "-b", "feature/test"]);
+    fs::write(&file, "one\ntwo changed\nthree\nfour\n").unwrap();
+
+    let response = get_editor_file_change_hunks(
+        harness.workspace_dir.to_str().unwrap(),
+        file.to_str().unwrap(),
+        "main",
+    )
+    .unwrap();
+
+    assert_eq!(response.resolved_ref, "main");
+    assert_eq!(response.hunks.len(), 2);
+    assert_eq!(response.hunks[0].new_start, 2);
+    assert_eq!(response.hunks[0].new_lines, 1);
+    assert_eq!(response.hunks[0].old_text.as_deref(), Some("two"));
+    assert_eq!(response.hunks[1].new_start, 4);
+    assert_eq!(response.hunks[1].new_lines, 1);
+    assert_eq!(response.hunks[1].old_text, None);
+}
+
+#[test]
+fn file_change_hunks_mark_untracked_file_as_added() {
+    let _lock = TEST_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    let harness = EditorFilesHarness::new();
+    init_git_repo(&harness.workspace_dir);
+    git(
+        &harness.workspace_dir,
+        &["commit", "--allow-empty", "-m", "init"],
+    );
+    let file = harness.workspace_dir.join("new.ts");
+    fs::write(&file, "const a = 1;\nconst b = 2;\n").unwrap();
+
+    let response = get_editor_file_change_hunks(
+        harness.workspace_dir.to_str().unwrap(),
+        file.to_str().unwrap(),
+        "HEAD",
+    )
+    .unwrap();
+
+    assert_eq!(response.hunks.len(), 1);
+    assert_eq!(response.hunks[0].new_start, 1);
+    assert_eq!(response.hunks[0].new_lines, 2);
+    assert_eq!(response.hunks[0].old_text, None);
+}
+
+#[test]
+fn list_workspace_diff_refs_includes_local_branches() {
+    let _lock = TEST_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    let harness = EditorFilesHarness::new();
+    init_git_repo(&harness.workspace_dir);
+    git(
+        &harness.workspace_dir,
+        &["commit", "--allow-empty", "-m", "init"],
+    );
+    git(&harness.workspace_dir, &["checkout", "-b", "feature/test"]);
+
+    let refs = list_workspace_diff_refs(harness.workspace_dir.to_str().unwrap()).unwrap();
+    let names: HashSet<String> = refs.into_iter().map(|item| item.name).collect();
+
+    assert!(names.contains("main"));
+    assert!(names.contains("feature/test"));
+}
+
+fn init_git_repo(root: &Path) {
+    git(root, &["init", "-b", "main"]);
+    git(root, &["config", "user.email", "test@helmor.test"]);
+    git(root, &["config", "user.name", "Test"]);
+    git(root, &["config", "commit.gpgsign", "false"]);
+}
+
+fn git(root: &Path, args: &[&str]) -> String {
+    git_ops::run_git(args.iter().copied(), Some(root)).unwrap_or_default()
 }

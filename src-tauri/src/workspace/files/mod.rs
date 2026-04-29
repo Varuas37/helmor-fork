@@ -8,12 +8,14 @@ pub use changes::{
     stage_workspace_file, unstage_workspace_file,
 };
 pub use editor::{
-    list_editor_files, list_editor_files_with_content, list_workspace_files, read_editor_file,
-    read_file_at_ref, stat_editor_file, write_editor_file,
+    get_editor_file_change_hunks, list_editor_files, list_editor_files_with_content,
+    list_workspace_diff_refs, list_workspace_files, read_editor_file, read_file_at_ref,
+    stat_editor_file, write_editor_file,
 };
 pub use types::{
-    EditorFileListItem, EditorFilePrefetchItem, EditorFileReadResponse, EditorFileStatResponse,
-    EditorFileWriteResponse, EditorFilesWithContentResponse,
+    EditorFileChangeHunk, EditorFileChangeHunksResponse, EditorFileListItem,
+    EditorFilePrefetchItem, EditorFileReadResponse, EditorFileStatResponse,
+    EditorFileWriteResponse, EditorFilesWithContentResponse, WorkspaceDiffRefItem,
 };
 
 #[cfg(test)]

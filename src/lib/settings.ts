@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { createContext, useContext } from "react";
 
 export type ThemeMode = "system" | "light" | "dark";
+export type FileIconPack = "default" | "material";
 
 /** Behavior when submitting a message while the agent is still responding.
  *  - `steer`: inject into the active turn (provider-native mid-turn steer).
@@ -23,6 +24,7 @@ export type AppSettings = {
 	branchPrefixType: "github" | "custom" | "none";
 	branchPrefixCustom: string;
 	theme: ThemeMode;
+	fileIconPack: FileIconPack;
 	notifications: boolean;
 	lastWorkspaceId: string | null;
 	lastSessionId: string | null;
@@ -32,6 +34,8 @@ export type AppSettings = {
 	/** Webview zoom factor. 1.0 = 100%. Range 0.5–2.0. */
 	zoomLevel: number;
 	followUpBehavior: FollowUpBehavior;
+	mainlineDiffEnabled: boolean;
+	mainlineDiffBaseRef: string;
 	/** Force the context-usage ring to always be visible. When false (the
 	 *  default), the ring auto-hides until usage crosses
 	 *  `CONTEXT_USAGE_AUTO_REVEAL_THRESHOLD`. */
@@ -54,6 +58,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	branchPrefixType: "github",
 	branchPrefixCustom: "",
 	theme: "system",
+	fileIconPack: "default",
 	notifications: true,
 	lastWorkspaceId: null,
 	lastSessionId: null,
@@ -62,6 +67,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	defaultFastMode: false,
 	zoomLevel: 1.0,
 	followUpBehavior: "steer",
+	mainlineDiffEnabled: true,
+	mainlineDiffBaseRef: "origin/HEAD",
 	alwaysShowContextUsage: true,
 	showUsageStats: true,
 	onboardingCompleted: false,
@@ -81,6 +88,7 @@ const SETTINGS_KEY_MAP: Record<Exclude<keyof AppSettings, "theme">, string> = {
 	fontSize: "app.font_size",
 	branchPrefixType: "branch_prefix_type",
 	branchPrefixCustom: "branch_prefix_custom",
+	fileIconPack: "app.file_icon_pack",
 	notifications: "app.notifications",
 	lastWorkspaceId: "app.last_workspace_id",
 	lastSessionId: "app.last_session_id",
@@ -89,6 +97,8 @@ const SETTINGS_KEY_MAP: Record<Exclude<keyof AppSettings, "theme">, string> = {
 	defaultFastMode: "app.default_fast_mode",
 	zoomLevel: "app.zoom_level",
 	followUpBehavior: "app.follow_up_behavior",
+	mainlineDiffEnabled: "app.mainline_diff_enabled",
+	mainlineDiffBaseRef: "app.mainline_diff_base_ref",
 	alwaysShowContextUsage: "app.always_show_context_usage",
 	showUsageStats: "app.show_usage_stats",
 	onboardingCompleted: "app.onboarding_completed",
@@ -143,6 +153,12 @@ function parseClaudeCustomProviderSettings(
 	}
 }
 
+function parseFileIconPack(raw: string | undefined): FileIconPack {
+	return raw === "material" || raw === "default"
+		? raw
+		: DEFAULT_SETTINGS.fileIconPack;
+}
+
 export async function loadSettings(): Promise<AppSettings> {
 	try {
 		const raw = await invoke<Record<string, string>>("get_app_settings");
@@ -162,6 +178,7 @@ export async function loadSettings(): Promise<AppSettings> {
 			theme:
 				(localStorage.getItem(THEME_STORAGE_KEY) as AppSettings["theme"]) ??
 				DEFAULT_SETTINGS.theme,
+			fileIconPack: parseFileIconPack(raw[SETTINGS_KEY_MAP.fileIconPack]),
 			notifications:
 				raw[SETTINGS_KEY_MAP.notifications] !== undefined
 					? raw[SETTINGS_KEY_MAP.notifications] === "true"
@@ -187,6 +204,13 @@ export async function loadSettings(): Promise<AppSettings> {
 					? v
 					: DEFAULT_SETTINGS.followUpBehavior;
 			})(),
+			mainlineDiffEnabled:
+				raw[SETTINGS_KEY_MAP.mainlineDiffEnabled] !== undefined
+					? raw[SETTINGS_KEY_MAP.mainlineDiffEnabled] === "true"
+					: DEFAULT_SETTINGS.mainlineDiffEnabled,
+			mainlineDiffBaseRef:
+				raw[SETTINGS_KEY_MAP.mainlineDiffBaseRef]?.trim() ||
+				DEFAULT_SETTINGS.mainlineDiffBaseRef,
 			alwaysShowContextUsage:
 				raw[SETTINGS_KEY_MAP.alwaysShowContextUsage] !== undefined
 					? raw[SETTINGS_KEY_MAP.alwaysShowContextUsage] === "true"

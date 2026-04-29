@@ -1,4 +1,5 @@
 import "monaco-editor/min/vs/editor/editor.main.css";
+import "monaco-editor/esm/vs/language/typescript/monaco.contribution.js";
 import type * as Monaco from "monaco-editor";
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import cssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
@@ -9,6 +10,19 @@ import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker"
 type MonacoModule = typeof Monaco;
 type StandaloneEditor = Monaco.editor.IStandaloneCodeEditor;
 type StandaloneDiffEditor = Monaco.editor.IStandaloneDiffEditor;
+type TextModel = Monaco.editor.ITextModel;
+type TypeScriptLanguageServiceDefaults = {
+	setCompilerOptions(options: Record<string, unknown>): void;
+	setDiagnosticsOptions(options: Record<string, unknown>): void;
+	setEagerModelSync(value: boolean): void;
+};
+type TypeScriptLanguageContribution = {
+	JsxEmit: { ReactJSX: number };
+	ModuleKind: { ESNext: number };
+	ScriptTarget: { ESNext: number };
+	javascriptDefaults: TypeScriptLanguageServiceDefaults;
+	typescriptDefaults: TypeScriptLanguageServiceDefaults;
+};
 
 export type DiffLineSide = "original" | "modified";
 
@@ -25,6 +39,14 @@ export type DiffLineAnchor = DiffLineTarget & {
 	visible: boolean;
 };
 
+export type EditorChangeHunk = {
+	newStart: number;
+	newLines: number;
+	oldStart: number;
+	oldLines: number;
+	oldText?: string;
+};
+
 type MonacoRuntime = {
 	monaco: MonacoModule;
 };
@@ -38,6 +60,7 @@ type FileEditorController = {
 	dispose(): void;
 	getValue(): string;
 	setValue(value: string): void;
+	setChangeHunks(hunks: ReadonlyArray<EditorChangeHunk>): void;
 	revealPosition(line?: number, column?: number): void;
 	onDidChangeModelContent(callback: (value: string) => void): DisposableLike;
 	/** Swap the active model. Returns false if no cached model and no content provided. */
@@ -69,6 +92,14 @@ let runtimePromise: Promise<MonacoRuntime> | null = null;
 
 /** Content cache for pre-fetched files — avoids IPC on first switch. */
 const fileContentCache = new Map<string, string>();
+const TYPESCRIPT_BUNDLER_MODULE_RESOLUTION = 100;
+const PROJECTLESS_DIAGNOSTIC_CODES_TO_IGNORE = [
+	2307, // Cannot find module. Monaco cannot read unopened workspace/node_modules files.
+	2792, // Cannot find module under older non-bundler wording.
+	7016, // Missing declaration file for third-party modules.
+];
+
+let configuredTypeScriptWorkspaceRoot: string | null | undefined;
 
 type EditorTheme = "light" | "dark";
 
@@ -90,6 +121,7 @@ export async function createFileEditor(options: {
 	container: HTMLElement;
 	path: string;
 	content: string;
+	workspaceRootPath?: string | null;
 	line?: number;
 	column?: number;
 	readOnly?: boolean;
@@ -97,12 +129,19 @@ export async function createFileEditor(options: {
 }): Promise<FileEditorController> {
 	const runtime = await ensureRuntime();
 	const { monaco } = runtime;
+	configureTypeScriptLanguageService(monaco, options.workspaceRootPath);
+	installChangeHighlightStyles();
 
 	const language = resolveLanguageId(monaco, options.path);
 
-	// Single model shared across all file switches — avoids editor.setModel()
-	// which causes a blank frame during the detach→attach cycle.
-	const model = monaco.editor.createModel(options.content, language);
+	const modelByPath = new Map<string, TextModel>();
+	let currentModel = getOrCreateFileModel({
+		monaco,
+		modelByPath,
+		path: options.path,
+		content: options.content,
+		language,
+	});
 
 	// Seed content cache for future switches
 	fileContentCache.set(options.path, options.content);
@@ -117,27 +156,32 @@ export async function createFileEditor(options: {
 		fontSize: options.compact ? 12 : 13,
 		lineHeight: options.compact ? 19 : 21,
 		minimap: { enabled: false },
-		model,
+		model: currentModel,
+		overviewRulerLanes: 0,
 		padding: options.compact
 			? { top: 10, bottom: 18 }
 			: { top: 14, bottom: 24 },
 		readOnly: Boolean(options.readOnly),
-		renderValidationDecorations: "editable",
+		renderValidationDecorations: "off",
 		scrollBeyondLastLine: false,
 		smoothScrolling: true,
 		tabSize: 2,
 		theme: themeId(desiredTheme),
 		wordWrap: "on",
 	});
+	const changeDecorations = editor.createDecorationsCollection();
 
 	revealEditorPosition(editor, options.line, options.column);
-
-	const currentModel = model;
 
 	return {
 		editor,
 		dispose() {
+			changeDecorations.clear();
 			editor.dispose();
+			for (const ownedModel of modelByPath.values()) {
+				ownedModel.dispose();
+			}
+			modelByPath.clear();
 		},
 		getValue() {
 			return currentModel.getValue();
@@ -148,6 +192,11 @@ export async function createFileEditor(options: {
 			}
 
 			currentModel.setValue(value);
+		},
+		setChangeHunks(hunks) {
+			changeDecorations.set(
+				buildChangeHighlightDecorations(monaco, currentModel, hunks),
+			);
 		},
 		revealPosition(line?: number, column?: number) {
 			revealEditorPosition(editor, line, column);
@@ -164,14 +213,19 @@ export async function createFileEditor(options: {
 				return false;
 			}
 
-			// In-place update: setValue + setModelLanguage on the SAME model.
-			// Unlike editor.setModel(), this never detaches the DOM → zero blank frames.
-			currentModel.setValue(resolvedContent);
-
 			const nextLanguage = resolveLanguageId(monaco, path);
-			if (nextLanguage && currentModel.getLanguageId() !== nextLanguage) {
-				monaco.editor.setModelLanguage(currentModel, nextLanguage);
+			const nextModel = getOrCreateFileModel({
+				monaco,
+				modelByPath,
+				path,
+				content: resolvedContent,
+				language: nextLanguage,
+			});
+			if (nextModel !== currentModel) {
+				editor.setModel(nextModel);
+				currentModel = nextModel;
 			}
+			changeDecorations.clear();
 
 			// Keep cache fresh for future switches back to this file
 			fileContentCache.set(path, resolvedContent);
@@ -188,9 +242,11 @@ export async function createDiffEditor(options: {
 	originalText: string;
 	modifiedText: string;
 	inline: boolean;
+	workspaceRootPath?: string | null;
 }): Promise<DiffEditorController> {
 	const runtime = await ensureRuntime();
 	const { monaco } = runtime;
+	configureTypeScriptLanguageService(monaco, options.workspaceRootPath);
 	const language = resolveLanguageId(monaco, options.path);
 
 	const originalUri = monaco.Uri.file(options.path).with({
@@ -232,6 +288,7 @@ export async function createDiffEditor(options: {
 		padding: { top: 14, bottom: 24 },
 		readOnly: true,
 		renderOverviewRuler: false,
+		renderValidationDecorations: "off",
 		renderSideBySide: !options.inline,
 		scrollBeyondLastLine: false,
 		smoothScrolling: true,
@@ -420,6 +477,182 @@ export function preWarmFileContents(
 
 export function syncVirtualFile(path: string, content: string) {
 	fileContentCache.set(path, content);
+}
+
+function getOrCreateFileModel({
+	monaco,
+	modelByPath,
+	path,
+	content,
+	language,
+}: {
+	monaco: MonacoModule;
+	modelByPath: Map<string, TextModel>;
+	path: string;
+	content: string;
+	language?: string;
+}) {
+	const cachedModel = modelByPath.get(path);
+	if (cachedModel && !cachedModel.isDisposed()) {
+		syncModel(monaco, cachedModel, content, language);
+		return cachedModel;
+	}
+
+	const uri = monaco.Uri.file(path);
+	const existingModel = monaco.editor.getModel(uri);
+	if (existingModel && !existingModel.isDisposed()) {
+		syncModel(monaco, existingModel, content, language);
+		modelByPath.set(path, existingModel);
+		return existingModel;
+	}
+
+	const model = monaco.editor.createModel(content, language, uri);
+	modelByPath.set(path, model);
+	return model;
+}
+
+function syncModel(
+	monaco: MonacoModule,
+	model: TextModel,
+	content: string,
+	language?: string,
+) {
+	if (model.getValue() !== content) {
+		model.setValue(content);
+	}
+	if (language && model.getLanguageId() !== language) {
+		monaco.editor.setModelLanguage(model, language);
+	}
+}
+
+function buildChangeHighlightDecorations(
+	monaco: MonacoModule,
+	model: TextModel,
+	hunks: ReadonlyArray<EditorChangeHunk>,
+): Monaco.editor.IModelDeltaDecoration[] {
+	const lineCount = model.getLineCount();
+	return hunks
+		.filter((hunk) => hunk.newLines > 0)
+		.map((hunk) => {
+			const startLineNumber = Math.max(1, Math.min(lineCount, hunk.newStart));
+			const endLineNumber = Math.max(
+				startLineNumber,
+				Math.min(lineCount, hunk.newStart + hunk.newLines - 1),
+			);
+			const hoverMessage = hunk.oldText?.trim()
+				? [
+						{
+							value: `Previous:\n\n${indentMarkdownCodeBlock(hunk.oldText)}`,
+						},
+					]
+				: undefined;
+
+			return {
+				range: new monaco.Range(
+					startLineNumber,
+					1,
+					endLineNumber,
+					model.getLineMaxColumn(endLineNumber),
+				),
+				options: {
+					className: "helmor-editor-change-line",
+					hoverMessage,
+					isWholeLine: true,
+					linesDecorationsClassName: "helmor-editor-change-gutter",
+				},
+			};
+		});
+}
+
+function indentMarkdownCodeBlock(value: string): string {
+	const trimmed = value.length > 5000 ? `${value.slice(0, 5000)}\n...` : value;
+	return trimmed
+		.split("\n")
+		.map((line) => `    ${line}`)
+		.join("\n");
+}
+
+function installChangeHighlightStyles() {
+	if (typeof document === "undefined") {
+		return;
+	}
+	const id = "helmor-editor-change-highlight-styles";
+	if (document.getElementById(id)) {
+		return;
+	}
+	const style = document.createElement("style");
+	style.id = id;
+	style.textContent = `
+.monaco-editor .helmor-editor-change-line {
+	background: rgba(35, 134, 54, 0.18);
+	border-left: 2px solid rgba(63, 185, 80, 0.9);
+}
+.monaco-editor .helmor-editor-change-gutter {
+	border-left: 2px solid rgba(63, 185, 80, 0.95);
+}
+`;
+	document.head.appendChild(style);
+}
+
+function configureTypeScriptLanguageService(
+	monaco: MonacoModule,
+	workspaceRootPath?: string | null,
+) {
+	const workspaceRoot = workspaceRootPath ?? null;
+	if (configuredTypeScriptWorkspaceRoot === workspaceRoot) {
+		return;
+	}
+	configuredTypeScriptWorkspaceRoot = workspaceRoot;
+
+	const ts = (
+		monaco.languages as unknown as {
+			typescript?: TypeScriptLanguageContribution;
+		}
+	).typescript;
+	if (!ts) {
+		return;
+	}
+
+	const compilerOptions: Record<string, unknown> = {
+		allowImportingTsExtensions: true,
+		allowJs: true,
+		allowNonTsExtensions: true,
+		allowSyntheticDefaultImports: true,
+		checkJs: false,
+		esModuleInterop: true,
+		isolatedModules: true,
+		jsx: ts.JsxEmit.ReactJSX,
+		lib: ["ES2022", "DOM", "DOM.Iterable"],
+		module: ts.ModuleKind.ESNext,
+		moduleResolution: TYPESCRIPT_BUNDLER_MODULE_RESOLUTION,
+		noEmit: true,
+		resolveJsonModule: true,
+		skipLibCheck: true,
+		strict: true,
+		target: ts.ScriptTarget.ESNext,
+		useDefineForClassFields: true,
+	};
+
+	if (workspaceRoot) {
+		compilerOptions.baseUrl = workspaceRoot;
+		compilerOptions.paths = {
+			"@/*": ["src/*"],
+		};
+	}
+
+	const diagnosticsOptions: Record<string, unknown> = {
+		noSemanticValidation: true,
+		noSuggestionDiagnostics: true,
+		noSyntaxValidation: true,
+		diagnosticCodesToIgnore: PROJECTLESS_DIAGNOSTIC_CODES_TO_IGNORE,
+	};
+
+	ts.typescriptDefaults.setCompilerOptions(compilerOptions);
+	ts.javascriptDefaults.setCompilerOptions(compilerOptions);
+	ts.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
+	ts.javascriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
+	ts.typescriptDefaults.setEagerModelSync(true);
+	ts.javascriptDefaults.setEagerModelSync(true);
 }
 
 async function ensureRuntime(): Promise<MonacoRuntime> {

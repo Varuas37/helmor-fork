@@ -1,22 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+	getMaterialFileIcon,
+	getMaterialFolderIcon,
+} from "file-extension-icon-js";
+import {
 	ChevronRight,
-	ExternalLink,
 	FileText,
 	Folder,
 	FolderOpen,
 	Search,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { type EditorFileReadResponse, readEditorFile } from "@/lib/api";
 import type { InspectorFileItem } from "@/lib/editor-session";
 import { workspaceFilesQueryOptions } from "@/lib/query-client";
+import { type FileIconPack, useSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
 type WorkspaceFilesViewProps = {
@@ -47,6 +44,7 @@ export function WorkspaceFilesView({
 	activeEditorPath,
 	onOpenWorkspaceFile,
 }: WorkspaceFilesViewProps) {
+	const { settings } = useSettings();
 	const query = useQuery({
 		...workspaceFilesQueryOptions(workspaceRootPath ?? "__missing__"),
 		enabled: active && !!workspaceRootPath,
@@ -56,20 +54,18 @@ export function WorkspaceFilesView({
 	const [expandedDirs, setExpandedDirs] = useState<Set<string>>(
 		() => new Set(),
 	);
-	const [selectedPath, setSelectedPath] = useState<string | null>(null);
+	const [pendingSelectedPath, setPendingSelectedPath] = useState<string | null>(
+		null,
+	);
+	const fileIconPack = settings.fileIconPack;
 	const didSeedDefaultExpansionRef = useRef(false);
 
 	useEffect(() => {
 		setFilter("");
 		setExpandedDirs(new Set());
-		setSelectedPath(null);
+		setPendingSelectedPath(null);
 		didSeedDefaultExpansionRef.current = false;
 	}, [workspaceRootPath]);
-
-	useEffect(() => {
-		if (!active || files.length === 0 || selectedPath) return;
-		setSelectedPath(files[0]?.absolutePath ?? null);
-	}, [active, files, selectedPath]);
 
 	useEffect(() => {
 		if (files.length === 0 || didSeedDefaultExpansionRef.current) return;
@@ -77,12 +73,12 @@ export function WorkspaceFilesView({
 		setExpandedDirs(defaultExpandedDirs(files));
 	}, [files]);
 
-	const selectedFile = useMemo(
-		() => files.find((file) => file.absolutePath === selectedPath) ?? null,
-		[files, selectedPath],
-	);
+	const selectedPath = activeEditorPath ?? pendingSelectedPath;
 
 	useEffect(() => {
+		const selectedFile = files.find(
+			(file) => file.absolutePath === selectedPath,
+		);
 		if (!selectedFile) return;
 		setExpandedDirs((current) => {
 			const next = new Set(current);
@@ -91,7 +87,7 @@ export function WorkspaceFilesView({
 			}
 			return next;
 		});
-	}, [selectedFile]);
+	}, [files, selectedPath]);
 
 	const trimmedFilter = filter.trim().toLowerCase();
 	const filteredFiles = useMemo(() => {
@@ -133,6 +129,13 @@ export function WorkspaceFilesView({
 			return next;
 		});
 	}, []);
+	const selectFile = useCallback(
+		(path: string) => {
+			setPendingSelectedPath(path);
+			onOpenWorkspaceFile?.(path);
+		},
+		[onOpenWorkspaceFile],
+	);
 
 	return (
 		<section
@@ -162,42 +165,34 @@ export function WorkspaceFilesView({
 					</label>
 				</div>
 
-				<div className="grid min-h-0 flex-1 grid-rows-[minmax(120px,38%)_1fr]">
-					<div
-						aria-label="Workspace file tree"
-						className="min-h-0 overflow-auto border-b border-border/60 py-1"
-					>
-						{!workspaceRootPath ? (
-							<FileTreeEmpty label="No workspace" />
-						) : query.isLoading ? (
-							<FileTreeEmpty label="Loading files" />
-						) : query.isError ? (
-							<FileTreeEmpty label="Unable to load files" />
-						) : visibleNodes.length === 0 ? (
-							<FileTreeEmpty label="No files" />
-						) : (
-							<ul className="space-y-0.5 px-1">
-								{visibleNodes.map(({ node, depth }) => (
-									<FileTreeRow
-										key={node.id}
-										node={node}
-										depth={depth}
-										expanded={expandedDirs.has(node.id)}
-										selectedPath={selectedPath}
-										activeEditorPath={activeEditorPath}
-										onToggleDirectory={toggleDirectory}
-										onSelectFile={setSelectedPath}
-									/>
-								))}
-							</ul>
-						)}
-					</div>
-
-					<FilePreview
-						file={selectedFile}
-						active={active}
-						onOpenWorkspaceFile={onOpenWorkspaceFile}
-					/>
+				<div
+					aria-label="Workspace file tree"
+					className="min-h-0 flex-1 overflow-auto py-1"
+				>
+					{!workspaceRootPath ? (
+						<FileTreeEmpty label="No workspace" />
+					) : query.isLoading ? (
+						<FileTreeEmpty label="Loading files" />
+					) : query.isError ? (
+						<FileTreeEmpty label="Unable to load files" />
+					) : visibleNodes.length === 0 ? (
+						<FileTreeEmpty label="No files" />
+					) : (
+						<ul className="space-y-0.5 px-1">
+							{visibleNodes.map(({ node, depth }) => (
+								<FileTreeRow
+									key={node.id}
+									node={node}
+									depth={depth}
+									expanded={expandedDirs.has(node.id)}
+									iconPack={fileIconPack}
+									selectedPath={selectedPath}
+									onToggleDirectory={toggleDirectory}
+									onSelectFile={selectFile}
+								/>
+							))}
+						</ul>
+					)}
 				</div>
 			</div>
 		</section>
@@ -208,23 +203,21 @@ function FileTreeRow({
 	node,
 	depth,
 	expanded,
+	iconPack,
 	selectedPath,
-	activeEditorPath,
 	onToggleDirectory,
 	onSelectFile,
 }: {
 	node: FileTreeNode;
 	depth: number;
 	expanded: boolean;
+	iconPack: FileIconPack;
 	selectedPath: string | null;
-	activeEditorPath?: string | null;
 	onToggleDirectory: (dirId: string) => void;
 	onSelectFile: (path: string) => void;
 }) {
 	const isDirectory = node.type === "directory";
 	const isSelected = node.file?.absolutePath === selectedPath;
-	const isActiveEditor = node.file?.absolutePath === activeEditorPath;
-	const Icon = isDirectory ? (expanded ? FolderOpen : Folder) : FileText;
 
 	return (
 		<li>
@@ -255,186 +248,46 @@ function FileTreeRow({
 				) : (
 					<span className="w-3 shrink-0" />
 				)}
-				<Icon className="size-3.5 shrink-0" strokeWidth={1.7} />
+				<FileTreeIcon node={node} expanded={expanded} iconPack={iconPack} />
 				<span className="min-w-0 flex-1 truncate">{node.name}</span>
-				{isActiveEditor ? (
-					<span className="size-1.5 shrink-0 rounded-full bg-foreground/70" />
-				) : null}
 			</button>
 		</li>
 	);
 }
 
+function FileTreeIcon({
+	node,
+	expanded,
+	iconPack,
+}: {
+	node: FileTreeNode;
+	expanded: boolean;
+	iconPack: FileIconPack;
+}) {
+	if (iconPack === "material") {
+		return node.type === "directory" ? (
+			<img
+				src={getMaterialFolderIcon(node.name, expanded)}
+				alt=""
+				className="size-4 shrink-0"
+			/>
+		) : (
+			<img
+				src={getMaterialFileIcon(node.file?.name ?? node.name)}
+				alt=""
+				className="size-4 shrink-0"
+			/>
+		);
+	}
+
+	const Icon =
+		node.type === "directory" ? (expanded ? FolderOpen : Folder) : FileText;
+	return <Icon className="size-3.5 shrink-0" strokeWidth={1.7} />;
+}
+
 function FileTreeEmpty({ label }: { label: string }) {
 	return (
 		<div className="flex h-full min-h-[96px] items-center justify-center px-4 text-center text-[12px] text-muted-foreground">
-			{label}
-		</div>
-	);
-}
-
-function FilePreview({
-	file,
-	active,
-	onOpenWorkspaceFile,
-}: {
-	file: InspectorFileItem | null;
-	active: boolean;
-	onOpenWorkspaceFile?: (path: string) => void;
-}) {
-	const editorHostRef = useRef<HTMLDivElement>(null);
-	const controllerRef = useRef<{
-		dispose(): void;
-		switchFile(path: string, content?: string): boolean;
-	} | null>(null);
-	const disposePreviewController = useCallback(() => {
-		controllerRef.current?.dispose();
-		controllerRef.current = null;
-	}, []);
-	const [readState, setReadState] = useState<
-		| { kind: "idle" }
-		| { kind: "loading"; path: string }
-		| { kind: "ready"; path: string }
-		| { kind: "error"; path: string; message: string }
-	>({ kind: "idle" });
-
-	useEffect(() => {
-		if (!active || !file) {
-			disposePreviewController();
-			setReadState({ kind: "idle" });
-			return;
-		}
-
-		let cancelled = false;
-		const filePath = file.absolutePath;
-		setReadState({ kind: "loading", path: filePath });
-
-		async function loadFile() {
-			try {
-				const response = await readEditorFile(filePath);
-				if (cancelled) return;
-				await renderPreview(filePath, response);
-				if (!cancelled) {
-					setReadState({ kind: "ready", path: filePath });
-				}
-			} catch (error) {
-				if (cancelled) return;
-				setReadState({
-					kind: "error",
-					path: filePath,
-					message: error instanceof Error ? error.message : String(error),
-				});
-			}
-		}
-
-		async function renderPreview(
-			path: string,
-			response: EditorFileReadResponse,
-		) {
-			const host = editorHostRef.current;
-			if (!host) return;
-
-			if (!controllerRef.current) {
-				const runtime = await import("@/lib/monaco-runtime");
-				if (cancelled || !editorHostRef.current) return;
-				const controller = await runtime.createFileEditor({
-					container: editorHostRef.current,
-					path,
-					content: response.content,
-					readOnly: true,
-					compact: true,
-				});
-				if (cancelled) {
-					controller.dispose();
-					return;
-				}
-				controllerRef.current = controller;
-				return;
-			}
-
-			controllerRef.current.switchFile(path, response.content);
-		}
-
-		void loadFile();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [active, disposePreviewController, file]);
-
-	useEffect(() => {
-		return () => {
-			disposePreviewController();
-		};
-	}, [disposePreviewController]);
-
-	if (!file) {
-		return <FilePreviewEmpty label="Select a file" />;
-	}
-
-	const isLoading =
-		readState.kind === "loading" && readState.path === file.absolutePath;
-	const error =
-		readState.kind === "error" && readState.path === file.absolutePath
-			? readState.message
-			: null;
-
-	return (
-		<div className="flex min-h-0 flex-col">
-			<div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/50 bg-background/35 px-3">
-				<span className="min-w-0 flex-1 truncate text-[12px] font-medium text-foreground">
-					{file.path}
-				</span>
-				{onOpenWorkspaceFile ? (
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								type="button"
-								aria-label="Open in editor"
-								variant="ghost"
-								size="icon-xs"
-								className="shrink-0 text-muted-foreground hover:text-foreground"
-								onClick={() => onOpenWorkspaceFile(file.absolutePath)}
-							>
-								<ExternalLink className="size-3.5" strokeWidth={1.8} />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent
-							side="bottom"
-							className="flex h-[24px] items-center rounded-md px-2 text-[12px] leading-none"
-						>
-							Open in editor
-						</TooltipContent>
-					</Tooltip>
-				) : null}
-			</div>
-			<div className="relative min-h-0 flex-1 bg-background">
-				<div
-					ref={editorHostRef}
-					aria-label="Workspace file preview"
-					className={cn("h-full min-h-0", (isLoading || error) && "opacity-40")}
-				/>
-				{isLoading ? <FilePreviewOverlay label="Loading file" /> : null}
-				{error ? <FilePreviewOverlay label="Unable to open file" /> : null}
-			</div>
-		</div>
-	);
-}
-
-function FilePreviewEmpty({ label }: { label: string }) {
-	return (
-		<div className="flex min-h-0 flex-col">
-			<div className="h-8 shrink-0 border-b border-border/50 bg-background/35" />
-			<div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center text-[12px] text-muted-foreground">
-				{label}
-			</div>
-		</div>
-	);
-}
-
-function FilePreviewOverlay({ label }: { label: string }) {
-	return (
-		<div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/55 text-[12px] text-muted-foreground">
 			{label}
 		</div>
 	);

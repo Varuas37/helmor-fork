@@ -11,17 +11,20 @@ use super::{
         editor_file_sort_key, metadata_mtime_ms, resolve_allowed_path,
     },
     types::{
-        EditorFileListItem, EditorFilePrefetchItem, EditorFileReadResponse, EditorFileStatResponse,
-        EditorFileWriteResponse, EditorFilesWithContentResponse,
+        EditorFileChangeHunk, EditorFileChangeHunksResponse, EditorFileListItem,
+        EditorFilePrefetchItem, EditorFileReadResponse, EditorFileStatResponse,
+        EditorFileWriteResponse, EditorFilesWithContentResponse, WorkspaceDiffRefItem,
     },
 };
 use crate::{
     bail_coded,
     error::{AnyhowCodedExt, ErrorCode},
+    git_ops,
 };
 
 const MAX_EDITOR_FILE_ITEMS: usize = 24;
 const MAX_PREFETCH_BYTES: u64 = 1_048_576;
+const DEFAULT_DIFF_BASE_REF: &str = "origin/HEAD";
 
 /// Read a file at a given git ref. Returns `None` when the path doesn't
 /// exist in that ref, or when the workspace itself has vanished (e.g. the
@@ -187,6 +190,132 @@ pub fn list_workspace_files(workspace_root_path: &str) -> Result<Vec<EditorFileL
     Ok(build_list_items(&workspace_root, discovered_files))
 }
 
+pub fn list_workspace_diff_refs(workspace_root_path: &str) -> Result<Vec<WorkspaceDiffRefItem>> {
+    let Some(workspace_root) = resolve_workspace_root_optional(workspace_root_path)? else {
+        return Ok(Vec::new());
+    };
+
+    let default_remote_ref = resolve_default_diff_ref(&workspace_root);
+    let output = git_ops::run_git(
+        [
+            "for-each-ref",
+            "--format=%(refname:short)%09%(refname)",
+            "refs/remotes",
+            "refs/heads",
+        ],
+        Some(&workspace_root),
+    )
+    .unwrap_or_default();
+
+    let mut refs = std::collections::BTreeMap::<String, WorkspaceDiffRefItem>::new();
+    if default_remote_ref
+        .as_deref()
+        .is_some_and(|value| value != "HEAD")
+    {
+        refs.insert(
+            DEFAULT_DIFF_BASE_REF.to_string(),
+            WorkspaceDiffRefItem {
+                name: DEFAULT_DIFF_BASE_REF.to_string(),
+                kind: "default".to_string(),
+                is_default: true,
+            },
+        );
+    }
+
+    for line in output.lines() {
+        let Some((name, full_ref)) = line.split_once('\t') else {
+            continue;
+        };
+        let name = name.trim();
+        if name.is_empty() {
+            continue;
+        }
+        let kind = if full_ref.starts_with("refs/remotes/") {
+            "remote"
+        } else if full_ref.starts_with("refs/heads/") {
+            "local"
+        } else {
+            "ref"
+        };
+        refs.insert(
+            name.to_string(),
+            WorkspaceDiffRefItem {
+                name: name.to_string(),
+                kind: kind.to_string(),
+                is_default: default_remote_ref.as_deref() == Some(name),
+            },
+        );
+    }
+
+    Ok(refs.into_values().collect())
+}
+
+pub fn get_editor_file_change_hunks(
+    workspace_root_path: &str,
+    file_path: &str,
+    base_ref: &str,
+) -> Result<EditorFileChangeHunksResponse> {
+    let Some(workspace_root) = resolve_workspace_root_optional(workspace_root_path)? else {
+        return Ok(EditorFileChangeHunksResponse {
+            base_ref: normalized_diff_base_ref(base_ref).to_string(),
+            resolved_ref: "HEAD".to_string(),
+            base_commit: String::new(),
+            hunks: Vec::new(),
+        });
+    };
+
+    let resolved_path = resolve_allowed_path(Path::new(file_path), false)?;
+    let relative = resolved_path
+        .strip_prefix(&workspace_root)
+        .with_context(|| format!("{file_path} is not inside {workspace_root_path}"))?;
+    let relative_str = relative.to_string_lossy().replace('\\', "/");
+    let requested_base_ref = normalized_diff_base_ref(base_ref);
+    let (resolved_ref, base_commit) =
+        resolve_diff_base_commit(&workspace_root, requested_base_ref)?;
+
+    if is_untracked_file(&workspace_root, &relative_str) {
+        let content = fs::read_to_string(&resolved_path).unwrap_or_default();
+        let line_count = content_line_count(&content);
+        let hunks = if line_count == 0 {
+            Vec::new()
+        } else {
+            vec![EditorFileChangeHunk {
+                new_start: 1,
+                new_lines: line_count,
+                old_start: 0,
+                old_lines: 0,
+                old_text: None,
+            }]
+        };
+        return Ok(EditorFileChangeHunksResponse {
+            base_ref: requested_base_ref.to_string(),
+            resolved_ref,
+            base_commit,
+            hunks,
+        });
+    }
+
+    let diff = git_ops::run_git(
+        [
+            "diff",
+            "--no-ext-diff",
+            "--unified=0",
+            base_commit.as_str(),
+            "--",
+            relative_str.as_str(),
+        ],
+        Some(&workspace_root),
+    )
+    .unwrap_or_default();
+
+    Ok(EditorFileChangeHunksResponse {
+        base_ref: requested_base_ref.to_string(),
+        resolved_ref,
+        base_commit,
+        hunks: parse_unified_zero_change_hunks(&diff),
+    })
+}
+
 pub fn list_editor_files_with_content(
     workspace_root_path: &str,
 ) -> Result<EditorFilesWithContentResponse> {
@@ -262,4 +391,176 @@ fn prefetch_items(
             })
         })
         .collect()
+}
+
+fn normalized_diff_base_ref(base_ref: &str) -> &str {
+    let trimmed = base_ref.trim();
+    if trimmed.is_empty() {
+        DEFAULT_DIFF_BASE_REF
+    } else {
+        trimmed
+    }
+}
+
+fn resolve_origin_head_alias(workspace_root: &Path) -> Option<String> {
+    git_ops::run_git(
+        ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+        Some(workspace_root),
+    )
+    .ok()
+    .map(|value| value.trim().to_string())
+    .filter(|value| !value.is_empty())
+}
+
+fn resolve_default_diff_ref(workspace_root: &Path) -> Option<String> {
+    resolve_origin_head_alias(workspace_root)
+        .or_else(|| existing_git_ref(workspace_root, "origin/main"))
+        .or_else(|| existing_git_ref(workspace_root, "origin/mainline"))
+        .or_else(|| existing_git_ref(workspace_root, "HEAD"))
+}
+
+fn existing_git_ref(workspace_root: &Path, git_ref: &str) -> Option<String> {
+    let commit_expr = format!("{git_ref}^{{commit}}");
+    git_ops::run_git(
+        ["rev-parse", "--verify", &commit_expr],
+        Some(workspace_root),
+    )
+    .ok()
+    .map(|_| git_ref.to_string())
+}
+
+fn resolve_diff_base_commit(workspace_root: &Path, base_ref: &str) -> Result<(String, String)> {
+    let resolved_ref = if base_ref == DEFAULT_DIFF_BASE_REF {
+        resolve_default_diff_ref(workspace_root).unwrap_or_else(|| "HEAD".to_string())
+    } else {
+        base_ref.to_string()
+    };
+    let commit_expr = format!("{resolved_ref}^{{commit}}");
+    let target_commit = git_ops::run_git(
+        ["rev-parse", "--verify", &commit_expr],
+        Some(workspace_root),
+    )
+    .with_context(|| format!("Unable to resolve diff base ref `{base_ref}`"))?
+    .trim()
+    .to_string();
+    let base_commit = git_ops::run_git(
+        ["merge-base", target_commit.as_str(), "HEAD"],
+        Some(workspace_root),
+    )
+    .ok()
+    .map(|value| value.trim().to_string())
+    .filter(|value| !value.is_empty())
+    .unwrap_or_else(|| target_commit.clone());
+
+    Ok((resolved_ref, base_commit))
+}
+
+fn is_untracked_file(workspace_root: &Path, relative_path: &str) -> bool {
+    git_ops::run_git(
+        [
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            relative_path,
+        ],
+        Some(workspace_root),
+    )
+    .map(|output| output.lines().any(|line| line.trim() == relative_path))
+    .unwrap_or(false)
+}
+
+fn content_line_count(content: &str) -> u32 {
+    if content.is_empty() {
+        0
+    } else {
+        content.lines().count() as u32
+    }
+}
+
+#[derive(Debug)]
+struct ParsedChangeHunk {
+    old_start: u32,
+    old_lines: u32,
+    new_start: u32,
+    new_lines: u32,
+    old_text_lines: Vec<String>,
+}
+
+fn parse_unified_zero_change_hunks(diff: &str) -> Vec<EditorFileChangeHunk> {
+    let mut hunks = Vec::new();
+    let mut current: Option<ParsedChangeHunk> = None;
+
+    for line in diff.lines() {
+        if line.starts_with("@@ ") {
+            push_parsed_change_hunk(&mut hunks, current.take());
+            current =
+                parse_hunk_header(line).map(|((old_start, old_lines), (new_start, new_lines))| {
+                    ParsedChangeHunk {
+                        old_start,
+                        old_lines,
+                        new_start,
+                        new_lines,
+                        old_text_lines: Vec::new(),
+                    }
+                });
+            continue;
+        }
+
+        let Some(hunk) = current.as_mut() else {
+            continue;
+        };
+        if line.starts_with("--- ") || line.starts_with("+++ ") {
+            continue;
+        }
+        if let Some(old_line) = line.strip_prefix('-') {
+            hunk.old_text_lines.push(old_line.to_string());
+        }
+    }
+
+    push_parsed_change_hunk(&mut hunks, current);
+    hunks
+}
+
+fn push_parsed_change_hunk(
+    hunks: &mut Vec<EditorFileChangeHunk>,
+    parsed: Option<ParsedChangeHunk>,
+) {
+    let Some(parsed) = parsed else {
+        return;
+    };
+    if parsed.new_lines == 0 {
+        return;
+    }
+    let old_text = if parsed.old_text_lines.is_empty() {
+        None
+    } else {
+        Some(parsed.old_text_lines.join("\n"))
+    };
+    hunks.push(EditorFileChangeHunk {
+        new_start: parsed.new_start,
+        new_lines: parsed.new_lines,
+        old_start: parsed.old_start,
+        old_lines: parsed.old_lines,
+        old_text,
+    });
+}
+
+fn parse_hunk_header(header: &str) -> Option<((u32, u32), (u32, u32))> {
+    let mut parts = header.split_whitespace();
+    if parts.next()? != "@@" {
+        return None;
+    }
+    let old_range = parse_diff_range(parts.next()?, '-')?;
+    let new_range = parse_diff_range(parts.next()?, '+')?;
+    Some((old_range, new_range))
+}
+
+fn parse_diff_range(value: &str, sign: char) -> Option<(u32, u32)> {
+    let range = value.strip_prefix(sign)?;
+    let (start, count) = match range.split_once(',') {
+        Some((start, count)) => (start, count),
+        None => (range, "1"),
+    };
+    Some((start.parse().ok()?, count.parse().ok()?))
 }

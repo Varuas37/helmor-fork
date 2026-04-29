@@ -9,6 +9,7 @@ import { getDiffCommentStorageKey } from "./diff-comment-storage";
 
 const apiMocks = vi.hoisted(() => ({
 	createSession: vi.fn(),
+	getEditorFileChangeHunks: vi.fn(),
 	hideSession: vi.fn(),
 	loadAgentModelSections: vi.fn(),
 	readEditorFile: vi.fn(),
@@ -30,9 +31,11 @@ const runtimeMocks = vi.hoisted(() => {
 			return { dispose: vi.fn() };
 		}),
 		revealPosition: vi.fn(),
+		setChangeHunks: vi.fn(),
 		setValue: vi.fn((value: string) => {
 			fileValue = value;
 		}),
+		switchFile: vi.fn(() => true),
 	};
 
 	const diffController = {
@@ -104,7 +107,9 @@ const runtimeMocks = vi.hoisted(() => {
 			this.fileController.getValue.mockClear();
 			this.fileController.onDidChangeModelContent.mockClear();
 			this.fileController.revealPosition.mockClear();
+			this.fileController.setChangeHunks.mockClear();
 			this.fileController.setValue.mockClear();
+			this.fileController.switchFile.mockClear();
 			this.syncVirtualFile.mockClear();
 		},
 		syncVirtualFile: vi.fn(async () => undefined),
@@ -117,6 +122,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
 	return {
 		...actual,
 		createSession: apiMocks.createSession,
+		getEditorFileChangeHunks: apiMocks.getEditorFileChangeHunks,
 		hideSession: apiMocks.hideSession,
 		loadAgentModelSections: apiMocks.loadAgentModelSections,
 		readEditorFile: apiMocks.readEditorFile,
@@ -171,12 +177,19 @@ describe("WorkspaceEditorSurface", () => {
 		installLocalStorageMock();
 		runtimeMocks.reset();
 		apiMocks.createSession.mockReset();
+		apiMocks.getEditorFileChangeHunks.mockReset();
 		apiMocks.hideSession.mockReset();
 		apiMocks.loadAgentModelSections.mockReset();
 		apiMocks.readEditorFile.mockReset();
 		apiMocks.renameSession.mockReset();
 		apiMocks.startAgentMessageStream.mockReset();
 		apiMocks.createSession.mockResolvedValue({ sessionId: "session-ai" });
+		apiMocks.getEditorFileChangeHunks.mockResolvedValue({
+			baseCommit: "base",
+			baseRef: "origin/HEAD",
+			hunks: [],
+			resolvedRef: "origin/main",
+		});
 		apiMocks.hideSession.mockResolvedValue(undefined);
 		apiMocks.renameSession.mockResolvedValue(undefined);
 		apiMocks.loadAgentModelSections.mockResolvedValue([
@@ -267,6 +280,56 @@ describe("WorkspaceEditorSurface", () => {
 					modifiedText: "const value = 2;\n",
 				}),
 			);
+		});
+	});
+
+	it("applies mainline change highlights to file editor", async () => {
+		const onChangeSpy = vi.fn();
+		apiMocks.readEditorFile.mockResolvedValue({
+			path: "/tmp/helmor-workspace/src/App.tsx",
+			content: "const value = 2;\n",
+			mtimeMs: 10,
+		});
+		apiMocks.getEditorFileChangeHunks.mockResolvedValue({
+			baseCommit: "abc123",
+			baseRef: "origin/HEAD",
+			resolvedRef: "origin/main",
+			hunks: [
+				{
+					newStart: 1,
+					newLines: 1,
+					oldStart: 1,
+					oldLines: 1,
+					oldText: "const value = 1;",
+				},
+			],
+		});
+
+		render(
+			<TooltipProvider delayDuration={0}>
+				<EditorSurfaceHarness
+					initialSession={{
+						kind: "file",
+						path: "/tmp/helmor-workspace/src/App.tsx",
+					}}
+					onChangeSpy={onChangeSpy}
+				/>
+			</TooltipProvider>,
+		);
+
+		await waitFor(() => {
+			expect(apiMocks.getEditorFileChangeHunks).toHaveBeenCalledWith(
+				"/tmp/helmor-workspace",
+				"/tmp/helmor-workspace/src/App.tsx",
+				"origin/HEAD",
+			);
+			expect(runtimeMocks.fileController.setChangeHunks).toHaveBeenCalledWith([
+				expect.objectContaining({
+					newLines: 1,
+					newStart: 1,
+					oldText: "const value = 1;",
+				}),
+			]);
 		});
 	});
 

@@ -34,6 +34,25 @@ pub async fn list_workspace_files(
 }
 
 #[tauri::command]
+pub async fn list_workspace_diff_refs(
+    workspace_root_path: String,
+) -> CmdResult<Vec<editor_files::WorkspaceDiffRefItem>> {
+    run_blocking(move || editor_files::list_workspace_diff_refs(&workspace_root_path)).await
+}
+
+#[tauri::command]
+pub async fn get_editor_file_change_hunks(
+    workspace_root_path: String,
+    file_path: String,
+    base_ref: String,
+) -> CmdResult<editor_files::EditorFileChangeHunksResponse> {
+    run_blocking(move || {
+        editor_files::get_editor_file_change_hunks(&workspace_root_path, &file_path, &base_ref)
+    })
+    .await
+}
+
+#[tauri::command]
 pub async fn list_editor_files_with_content(
     workspace_root_path: String,
 ) -> CmdResult<editor_files::EditorFilesWithContentResponse> {

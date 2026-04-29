@@ -76,6 +76,7 @@ import {
 	drainPendingCliSends,
 	markSessionRead,
 	markSessionUnread,
+	openFileInEditor,
 	openWorkspaceInEditor,
 	openWorkspaceInFinder,
 	prewarmSlashCommandsForWorkspace,
@@ -158,6 +159,9 @@ function MainApp() {
 		null,
 	);
 	const [settingsWorkspaceRepoId, setSettingsWorkspaceRepoId] = useState<
+		string | null
+	>(null);
+	const [settingsWorkspaceRootPath, setSettingsWorkspaceRootPath] = useState<
 		string | null
 	>(null);
 	const [settingsInitialSection, setSettingsInitialSection] =
@@ -309,10 +313,15 @@ function MainApp() {
 					<AppOnboarding onComplete={completeOnboarding} />
 				) : (
 					<AppShell
-						onOpenSettings={(workspaceId, workspaceRepoId) => {
+						onOpenSettings={(
+							workspaceId,
+							workspaceRepoId,
+							workspaceRootPath,
+						) => {
 							setSettingsInitialSection(undefined);
 							setSettingsWorkspaceId(workspaceId);
 							setSettingsWorkspaceRepoId(workspaceRepoId);
+							setSettingsWorkspaceRootPath(workspaceRootPath);
 							setSettingsOpen(true);
 						}}
 					/>
@@ -322,6 +331,7 @@ function MainApp() {
 					open={settingsOpen}
 					workspaceId={settingsWorkspaceId}
 					workspaceRepoId={settingsWorkspaceRepoId}
+					workspaceRootPath={settingsWorkspaceRootPath}
 					initialSection={settingsInitialSection}
 					onClose={() => {
 						setSettingsOpen(false);
@@ -341,6 +351,7 @@ function AppShell({
 	onOpenSettings: (
 		workspaceId: string | null,
 		workspaceRepoId: string | null,
+		workspaceRootPath: string | null,
 	) => void;
 }) {
 	useZoom();
@@ -680,6 +691,24 @@ function AppShell({
 				pushWorkspaceToast(String(e), `Failed to open ${preferredEditor.name}`),
 		);
 	}, [preferredEditor, pushWorkspaceToast, selectedWorkspaceId]);
+	const handleOpenEditorFileInPreferredEditor = useCallback(
+		(filePath: string) => {
+			if (!selectedWorkspaceId || !preferredEditor) {
+				return;
+			}
+			void openFileInEditor(
+				selectedWorkspaceId,
+				preferredEditor.id,
+				filePath,
+			).catch((e) =>
+				pushWorkspaceToast(
+					String(e),
+					`Failed to open file in ${preferredEditor.name}`,
+				),
+			);
+		},
+		[preferredEditor, pushWorkspaceToast, selectedWorkspaceId],
+	);
 	const handleToggleTheme = useCallback(() => {
 		updateSettings({
 			theme: resolveTheme(appSettings.theme) === "dark" ? "light" : "dark",
@@ -751,16 +780,6 @@ function AppShell({
 		...workspaceDetailQueryOptions(selectedWorkspaceId ?? "__none__"),
 		enabled: isIdentityConnected && selectedWorkspaceId !== null,
 	});
-	const handleOpenSettings = useCallback((): void => {
-		onOpenSettings(
-			selectedWorkspaceId,
-			selectedWorkspaceDetailQuery.data?.repoId ?? null,
-		);
-	}, [
-		onOpenSettings,
-		selectedWorkspaceDetailQuery.data?.repoId,
-		selectedWorkspaceId,
-	]);
 	const selectedWorkspaceDetail =
 		selectedWorkspaceDetailQuery.data ??
 		(selectedWorkspaceId
@@ -773,6 +792,18 @@ function AppShell({
 		selectedWorkspaceDetail?.state === "archived"
 			? null
 			: (selectedWorkspaceDetail?.rootPath ?? null);
+	const handleOpenSettings = useCallback((): void => {
+		onOpenSettings(
+			selectedWorkspaceId,
+			selectedWorkspaceDetail?.repoId ?? null,
+			workspaceRootPath,
+		);
+	}, [
+		onOpenSettings,
+		selectedWorkspaceDetail?.repoId,
+		selectedWorkspaceId,
+		workspaceRootPath,
+	]);
 
 	const handleCopyWorkspacePath = useCallback(() => {
 		if (!workspaceRootPath) return;
@@ -2310,6 +2341,12 @@ function AppShell({
 													workspaceId={selectedWorkspaceId}
 													workspaceRootPath={workspaceRootPath}
 													onChangeSession={handleEditorSessionChange}
+													onOpenExternalFile={
+														preferredEditor
+															? handleOpenEditorFileInPreferredEditor
+															: undefined
+													}
+													externalEditorName={preferredEditor?.name ?? null}
 													onExit={handleExitEditorMode}
 													onError={handleEditorSurfaceError}
 												/>

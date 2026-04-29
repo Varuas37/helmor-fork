@@ -11,6 +11,8 @@
 //! rather than relying on Launch Services' name mapping — more robust against
 //! renamed `.app` bundles.
 
+use std::path::{Path, PathBuf};
+
 use anyhow::Context;
 use serde::Serialize;
 
@@ -434,16 +436,12 @@ fn resolve_single(spec: &EditorSpec) -> Option<String> {
 }
 
 #[cfg(target_os = "macos")]
-fn launch_with_open(
-    app_path: Option<&str>,
-    app_name: &str,
-    dir: &std::path::Path,
-) -> anyhow::Result<()> {
-    let dir_str = dir.display().to_string();
+fn launch_with_open(app_path: Option<&str>, app_name: &str, target: &Path) -> anyhow::Result<()> {
+    let target_str = target.display().to_string();
     let mut cmd = std::process::Command::new("open");
     match app_path {
-        Some(p) => cmd.args(["-a", p, &dir_str]),
-        None => cmd.args(["-a", app_name, &dir_str]),
+        Some(p) => cmd.args(["-a", p, &target_str]),
+        None => cmd.args(["-a", app_name, &target_str]),
     };
     cmd.spawn().map(|_| ()).context("open command failed")
 }
@@ -452,7 +450,7 @@ fn launch_with_open(
 fn launch_with_open(
     _app_path: Option<&str>,
     _app_name: &str,
-    _dir: &std::path::Path,
+    _target: &Path,
 ) -> anyhow::Result<()> {
     anyhow::bail!("Opening third-party editors is only supported on macOS")
 }
@@ -482,17 +480,7 @@ pub async fn open_workspace_in_editor(workspace_id: String, editor: String) -> C
         let spec =
             spec_by_id(&editor).ok_or_else(|| anyhow::anyhow!("Unsupported editor: {editor}"))?;
 
-        let record = workspace_models::load_workspace_record_by_id(&workspace_id)?
-            .with_context(|| format!("Workspace not found: {workspace_id}"))?;
-
-        let workspace_dir =
-            crate::data_dir::workspace_dir(&record.repo_name, &record.directory_name)?;
-        if !workspace_dir.is_dir() {
-            return Err(anyhow::anyhow!(
-                "Workspace directory not found: {}",
-                workspace_dir.display()
-            ));
-        }
+        let workspace_dir = workspace_dir_for_id(&workspace_id)?;
 
         // Prefer the absolute app path (bypasses Launch Services name resolution,
         // which trips on renamed bundles and ambiguous names).
@@ -504,23 +492,67 @@ pub async fn open_workspace_in_editor(workspace_id: String, editor: String) -> C
 }
 
 #[tauri::command]
+pub async fn open_file_in_editor(
+    workspace_id: String,
+    editor: String,
+    file_path: String,
+) -> CmdResult<()> {
+    run_blocking(move || {
+        let spec =
+            spec_by_id(&editor).ok_or_else(|| anyhow::anyhow!("Unsupported editor: {editor}"))?;
+        let workspace_dir = workspace_dir_for_id(&workspace_id)?;
+        let target_file = resolve_workspace_file(&workspace_dir, &file_path)?;
+
+        let resolved = resolve_single(spec);
+        launch_with_open(resolved.as_deref(), spec.name, &target_file)
+            .with_context(|| format!("Failed to open {} in {}", target_file.display(), spec.name))
+    })
+    .await
+}
+
+#[tauri::command]
 pub async fn open_workspace_in_finder(workspace_id: String) -> CmdResult<()> {
     run_blocking(move || {
-        let record = workspace_models::load_workspace_record_by_id(&workspace_id)?
-            .with_context(|| format!("Workspace not found: {workspace_id}"))?;
-
-        let workspace_dir =
-            crate::data_dir::workspace_dir(&record.repo_name, &record.directory_name)?;
-        if !workspace_dir.is_dir() {
-            return Err(anyhow::anyhow!(
-                "Workspace directory not found: {}",
-                workspace_dir.display()
-            ));
-        }
+        let workspace_dir = workspace_dir_for_id(&workspace_id)?;
 
         reveal_in_finder(&workspace_dir).context("Failed to open Finder")
     })
     .await
+}
+
+fn workspace_dir_for_id(workspace_id: &str) -> anyhow::Result<PathBuf> {
+    let record = workspace_models::load_workspace_record_by_id(workspace_id)?
+        .with_context(|| format!("Workspace not found: {workspace_id}"))?;
+
+    let workspace_dir = crate::data_dir::workspace_dir(&record.repo_name, &record.directory_name)?;
+    if !workspace_dir.is_dir() {
+        anyhow::bail!("Workspace directory not found: {}", workspace_dir.display());
+    }
+    Ok(workspace_dir)
+}
+
+fn resolve_workspace_file(workspace_dir: &Path, file_path: &str) -> anyhow::Result<PathBuf> {
+    let candidate = PathBuf::from(file_path);
+    let absolute = if candidate.is_absolute() {
+        candidate
+    } else {
+        workspace_dir.join(candidate)
+    };
+    let canonical_root = workspace_dir
+        .canonicalize()
+        .with_context(|| format!("Failed to canonicalize {}", workspace_dir.display()))?;
+    let canonical_file = absolute
+        .canonicalize()
+        .with_context(|| format!("File not found: {}", absolute.display()))?;
+
+    if !canonical_file.starts_with(&canonical_root) {
+        anyhow::bail!("File is outside workspace: {}", canonical_file.display());
+    }
+    if !canonical_file.is_file() {
+        anyhow::bail!("Editor target is not a file: {}", canonical_file.display());
+    }
+
+    Ok(canonical_file)
 }
 
 #[cfg(test)]
@@ -619,5 +651,53 @@ mod tests {
                 "legacy id `{id}` missing from catalog"
             );
         }
+    }
+
+    #[test]
+    fn resolve_workspace_file_accepts_relative_file_inside_workspace() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("workspace");
+        std::fs::create_dir_all(workspace.join("src")).unwrap();
+        let file = workspace.join("src").join("app.ts");
+        std::fs::write(&file, "export const app = true;\n").unwrap();
+
+        let resolved = resolve_workspace_file(&workspace, "src/app.ts").unwrap();
+
+        assert_eq!(resolved, file.canonicalize().unwrap());
+    }
+
+    #[test]
+    fn resolve_workspace_file_rejects_paths_outside_workspace() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("workspace");
+        let outside = temp.path().join("outside.ts");
+        std::fs::create_dir_all(&workspace).unwrap();
+        std::fs::write(&outside, "export const outside = true;\n").unwrap();
+
+        let error = resolve_workspace_file(&workspace, outside.to_str().unwrap()).unwrap_err();
+
+        assert!(
+            format!("{error:#}").contains("outside workspace"),
+            "unexpected error: {error:#}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_workspace_file_rejects_symlinks_outside_workspace() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("workspace");
+        let outside = temp.path().join("outside.ts");
+        let link = workspace.join("linked.ts");
+        std::fs::create_dir_all(&workspace).unwrap();
+        std::fs::write(&outside, "export const outside = true;\n").unwrap();
+        std::os::unix::fs::symlink(&outside, &link).unwrap();
+
+        let error = resolve_workspace_file(&workspace, link.to_str().unwrap()).unwrap_err();
+
+        assert!(
+            format!("{error:#}").contains("outside workspace"),
+            "unexpected error: {error:#}"
+        );
     }
 }
