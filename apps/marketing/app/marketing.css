@@ -1,0 +1,893 @@
+/* =======================================================================
+   Marketing page — ported from Marketing Site.html
+   Shipping: editorial direction + pun tagline. Direction/tagline switchers
+   removed (only theme toggle remains).
+   ======================================================================= */
+
+/* ---------- Layout skeleton ---------- */
+.page {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	display: grid;
+	grid-template-rows: auto 1fr;
+}
+
+/* ---------- Top rail ---------- */
+.rail {
+	height: 48px;
+	padding: 0 20px;
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	border-bottom: 1px solid var(--border);
+	background: var(--background);
+	font-size: 12px;
+}
+.rail .brand {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 600;
+	font-size: 13px;
+	letter-spacing: -0.005em;
+}
+.rail .brand img {
+	width: 18px;
+	height: 18px;
+}
+/* Both logo variants ship in the DOM; the <html> theme class picks one.
+ * This avoids a React re-render swapping src at mount (which caused a dark
+ * logo to flash for light-mode visitors before the useEffect settled). */
+html.light .brand-mark-dark,
+html.dark .brand-mark-light {
+	display: none;
+}
+.rail .version {
+	font-family: var(--font-mono);
+	color: var(--muted-foreground);
+	font-size: 11px;
+	padding: 2px 6px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+}
+.rail .spacer {
+	flex: 1;
+}
+.rail .links {
+	display: flex;
+	gap: 2px;
+}
+.rail .links a {
+	padding: 6px 10px;
+	color: var(--muted-foreground);
+	border-radius: var(--radius-sm);
+	transition:
+		color var(--motion-fast),
+		background var(--motion-fast);
+}
+.rail .links a:hover {
+	color: var(--foreground);
+	background: var(--muted);
+}
+
+.theme-toggle {
+	display: inline-flex;
+	gap: 2px;
+	padding: 2px;
+	background: var(--muted);
+	border: 1px solid var(--border);
+	border-radius: 7px;
+}
+.theme-toggle button {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	width: 24px;
+	height: 20px;
+	border-radius: 4px;
+	color: var(--muted-foreground);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition:
+		color var(--motion-fast),
+		background var(--motion-fast);
+}
+.theme-toggle button.active {
+	background: var(--card);
+	color: var(--foreground);
+}
+
+/* ---------- Main stage (editorial only) ---------- */
+.stage {
+	display: grid;
+	/* Left col max derived from the hero type.
+	 * "Helmor takes" at clamp-max font-size (68px) + tracking −0.035em measures
+	 * ≈ 400px. Inner text area = col − left-pad(56) − right-pad(24). Setting
+	 * max to 520 gives ≈ 440px usable, safely past the wrap threshold so the
+	 * phrase stays on one line at wide viewports. */
+	grid-template-columns: minmax(420px, 520px) 1fr;
+	min-height: 0;
+	overflow: hidden;
+	/* Atmospheric FX layer is absolutely positioned inside — anchor it here,
+	 * and isolate so mix-blend-mode stays scoped and doesn't bleed to siblings. */
+	position: relative;
+	isolation: isolate;
+	/* Global FX intensity (0..1). Controls opacity of light-burst / smoke / dust.
+	 * Hoisted here because the FX layer spans both columns. */
+	--fx-intensity: 0.75;
+}
+
+/* Left — pitch.
+ * Transparent so atmospheric smoke behind it shows through as a subtle haze
+ * wrapping the text. Text sits above smoke via z-index. A left→right gradient
+ * mask (::before) keeps body copy readable when heavy smoke drifts across. */
+.pitch {
+	padding: 72px 24px 48px 56px;
+	display: flex;
+	flex-direction: column;
+	gap: 28px;
+	overflow: hidden;
+	background: transparent;
+	position: relative;
+	z-index: 2;
+}
+.pitch::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		to right,
+		var(--background) 0%,
+		color-mix(in oklch, var(--background) 85%, transparent) 50%,
+		color-mix(in oklch, var(--background) 35%, transparent) 85%,
+		transparent 100%
+	);
+	z-index: -1;
+	pointer-events: none;
+}
+
+/* Changelog chip */
+.changelog-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 3px 10px 3px 3px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--card);
+	font-size: 11px;
+	color: var(--muted-foreground);
+	width: fit-content;
+	transition: border-color var(--motion-fast);
+}
+.changelog-chip:hover {
+	border-color: var(--foreground);
+}
+.changelog-chip .tag {
+	background: var(--muted);
+	color: var(--foreground);
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 10px;
+	font-weight: 500;
+	font-family: var(--font-mono);
+}
+.changelog-chip .arrow {
+	color: var(--muted-foreground);
+}
+
+/* Hero */
+h1.hero {
+	margin: 0;
+	font-weight: 600;
+	letter-spacing: -0.03em;
+	text-wrap: balance;
+	color: var(--foreground);
+	font-size: clamp(36px, 4vw, 54px);
+	line-height: 1.06;
+}
+h1.hero .line2 {
+	color: var(--muted-foreground);
+}
+h1.hero .and {
+	display: block;
+	height: 0.15em;
+}
+
+.sub {
+	font-size: 14px;
+	color: var(--muted-foreground);
+	line-height: 1.55;
+	max-width: 38ch;
+	text-wrap: pretty;
+}
+
+/* CTAs */
+.cta {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	height: 32px;
+	padding: 0 14px;
+	border-radius: 8px;
+	font-size: 12.5px;
+	font-weight: 500;
+	border: 1px solid transparent;
+	cursor: pointer;
+	white-space: nowrap;
+	transition:
+		background var(--motion-fast),
+		border-color var(--motion-fast),
+		opacity var(--motion-fast),
+		transform var(--motion-fast);
+}
+.btn:active {
+	transform: translateY(1px);
+}
+.btn.primary {
+	background: var(--primary);
+	color: var(--primary-foreground);
+}
+.btn.primary:hover {
+	opacity: 0.88;
+}
+.btn.outline {
+	background: transparent;
+	border-color: var(--border);
+	color: var(--foreground);
+}
+.btn.outline:hover {
+	background: var(--muted);
+}
+
+/* ---------- Download dropdown ---------- */
+/* Positioning anchor for .dl-panel. The menu itself is only as tall as the
+ * trigger; the panel floats 8px below via position:absolute. */
+.dl-menu {
+	position: relative;
+}
+.dl-trigger .caret {
+	margin-left: 2px;
+	margin-right: -4px;
+	opacity: 0.75;
+	transition: transform var(--motion-fast);
+}
+.dl-menu[data-open="true"] .dl-trigger .caret {
+	transform: rotate(180deg);
+}
+.dl-panel {
+	position: absolute;
+	top: calc(100% + 8px);
+	left: 0;
+	width: 280px;
+	background: var(--popover);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	box-shadow:
+		0 24px 48px -16px oklch(0 0 0 / 40%),
+		0 6px 16px -6px oklch(0 0 0 / 25%);
+	padding: 4px;
+	/* Closed: transparent, slightly lifted + shrunk, non-interactive.
+	 * CSS drives the transition; React just flips data-open. */
+	opacity: 0;
+	transform: translateY(-4px) scale(0.98);
+	pointer-events: none;
+	transition:
+		opacity 160ms var(--ease-out),
+		transform 160ms var(--ease-out);
+	z-index: 50;
+}
+.dl-menu[data-open="true"] .dl-panel {
+	opacity: 1;
+	transform: translateY(0) scale(1);
+	pointer-events: auto;
+}
+.dl-item {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 10px;
+	border-radius: 7px;
+	cursor: pointer;
+	transition: background var(--motion-fast);
+}
+.dl-item:hover {
+	background: var(--muted);
+}
+.dl-item + .dl-item {
+	margin-top: 2px;
+}
+.dl-chip {
+	font-family: var(--font-mono);
+	font-size: 9.5px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	padding: 3px 6px;
+	border: 1px solid var(--border);
+	border-radius: 5px;
+	color: var(--muted-foreground);
+	background: var(--muted);
+	min-width: 28px;
+	text-align: center;
+}
+.dl-text {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+.dl-title {
+	font-size: 12.5px;
+	font-weight: 500;
+	color: var(--foreground);
+	line-height: 1.2;
+}
+.dl-sub {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--muted-foreground);
+	line-height: 1.2;
+}
+.dl-size {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--muted-foreground);
+	white-space: nowrap;
+}
+.dl-foot {
+	margin-top: 4px;
+	padding: 8px 10px 6px;
+	border-top: 1px solid var(--border);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--muted-foreground);
+}
+.dl-foot .ok {
+	color: var(--status-progress);
+}
+/* biome-ignore lint/style/noDescendingSpecificity: targets a different ancestor than .rail .links a */
+.dl-foot a {
+	color: var(--muted-foreground);
+	transition: color var(--motion-fast);
+}
+/* biome-ignore lint/style/noDescendingSpecificity: targets a different ancestor than .rail .links a:hover */
+.dl-foot a:hover {
+	color: var(--foreground);
+}
+
+/* Meta line */
+.meta {
+	display: flex;
+	gap: 14px;
+	align-items: center;
+	color: var(--muted-foreground);
+	font-family: var(--font-mono);
+	font-size: 11px;
+}
+.meta .sep {
+	width: 3px;
+	height: 3px;
+	border-radius: 50%;
+	background: var(--border);
+}
+.meta .ok {
+	color: var(--status-progress);
+}
+
+/* =========================================================
+   ATMOSPHERIC FX — right-edge light burst + volumetric smoke
+   Spans both columns of .stage. Pointer-events:none so it
+   never blocks the pitch copy or product interaction.
+   ========================================================= */
+.stage > .atmos {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 0;
+	overflow: hidden;
+}
+
+/* The light source — a bright hot spot off the right edge.
+ * Layered radial gradients make a crisp core + wide diffused bloom. */
+.light-burst {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 0;
+	opacity: calc(var(--fx-intensity) * 1);
+	/* DARK MODE — brilliant white core blooming from the right, cool icy halo
+	 * extending deep into the frame, dark vignette top/bottom creating the
+	 * "tunnel of light" feel from the reference. */
+	background: /* tight blown-out white core past the right edge */
+			radial-gradient(
+				circle at 96% 50%,
+				oklch(1 0 0 / 100%) 0%,
+				oklch(1 0 0 / 95%) 4%,
+				oklch(0.97 0.03 240 / 80%) 9%,
+				oklch(0.88 0.08 245 / 50%) 16%,
+				transparent 30%
+			),
+			/* wide cool halo wrapping into the middle of the frame */
+			radial-gradient(
+				ellipse 95% 130% at 110% 50%,
+				oklch(0.85 0.12 245 / 65%) 0%,
+				oklch(0.65 0.15 252 / 40%) 22%,
+				oklch(0.42 0.13 258 / 22%) 48%,
+				transparent 75%
+			),
+			/* deep cold wash reaching across most of the stage */
+			radial-gradient(
+				ellipse 150% 110% at 125% 45%,
+				oklch(0.45 0.1 250 / 30%) 0%,
+				oklch(0.3 0.08 255 / 15%) 40%,
+				transparent 75%
+			),
+			/* top + bottom vignette — pulls the eye into the beam */
+			linear-gradient(
+				to bottom,
+				oklch(0.08 0.01 260 / 55%) 0%,
+				transparent 22%,
+				transparent 78%,
+				oklch(0.08 0.01 260 / 55%) 100%
+			);
+	mix-blend-mode: screen;
+	will-change: opacity, transform;
+	transform: translateZ(0);
+}
+/* Radiating light beams — long soft wedges emanating from the right core. */
+.light-burst::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background:
+		linear-gradient(
+			105deg,
+			transparent 58%,
+			oklch(0.95 0.06 245 / 0%) 60%,
+			oklch(0.98 0.04 245 / 35%) 72%,
+			oklch(1 0 0 / 55%) 88%,
+			oklch(1 0 0 / 70%) 100%
+		),
+		linear-gradient(
+			95deg,
+			transparent 52%,
+			oklch(0.95 0.06 245 / 0%) 55%,
+			oklch(0.98 0.04 245 / 45%) 70%,
+			oklch(1 0 0 / 65%) 90%,
+			oklch(1 0 0 / 80%) 100%
+		),
+		linear-gradient(
+			82deg,
+			transparent 58%,
+			oklch(0.95 0.06 245 / 0%) 62%,
+			oklch(0.98 0.04 245 / 30%) 74%,
+			oklch(1 0 0 / 50%) 90%,
+			oklch(1 0 0 / 65%) 100%
+		);
+	filter: blur(14px);
+	mix-blend-mode: screen;
+	opacity: 0.9;
+	pointer-events: none;
+}
+/* Light mode — warm sunlit haze instead of icy blue smoke. */
+html.light .light-burst {
+	background:
+		radial-gradient(
+			circle at 96% 50%,
+			oklch(1 0 0 / 100%) 0%,
+			oklch(0.99 0.01 85 / 90%) 6%,
+			oklch(0.94 0.03 80 / 55%) 14%,
+			transparent 32%
+		),
+		radial-gradient(
+			ellipse 95% 130% at 110% 50%,
+			oklch(0.94 0.04 85 / 70%) 0%,
+			oklch(0.85 0.05 85 / 40%) 28%,
+			transparent 70%
+		),
+		radial-gradient(
+			ellipse 150% 110% at 125% 45%,
+			oklch(0.82 0.03 85 / 28%) 0%,
+			transparent 75%
+		),
+		linear-gradient(
+			to bottom,
+			oklch(0.8 0.02 85 / 15%) 0%,
+			transparent 22%,
+			transparent 78%,
+			oklch(0.8 0.02 85 / 15%) 100%
+		);
+	mix-blend-mode: normal;
+}
+
+/* Smoke host — spans the entire stage so plumes drift across pitch copy
+ * as well as the product frame. */
+.smoke {
+	position: absolute;
+	inset: -20% -5% -20% -5%;
+	pointer-events: none;
+	z-index: 1;
+	opacity: calc(var(--fx-intensity) * 1.15);
+	mix-blend-mode: screen;
+	--cursor-x: 0.5;
+	--cursor-y: 0.5;
+	--swirl-strength: 1;
+	--swirl-mode: 1;
+	will-change: transform, filter;
+}
+html.light .smoke {
+	mix-blend-mode: multiply;
+	opacity: calc(var(--fx-intensity) * 0.75);
+}
+.smoke svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
+/* Three drifting plumes at different depths. Drift is CSS transform (cheap);
+ * turbulence shimmer is done inside the filter via SMIL animate of baseFrequency. */
+.plume {
+	position: absolute;
+	width: 120%;
+	height: 120%;
+	top: -10%;
+	left: -10%;
+	transform-origin: 80% 50%;
+	will-change: transform;
+}
+.plume-back {
+	animation: smokeDriftBack 36s ease-in-out infinite;
+	opacity: 0.95;
+}
+.plume-mid {
+	animation: smokeDriftMid 27s ease-in-out infinite;
+	opacity: 1;
+}
+.plume-front {
+	animation: smokeDriftFront 21s ease-in-out infinite;
+	opacity: 1;
+}
+@keyframes smokeDriftBack {
+	0%,
+	100% {
+		transform: translate3d(0, 0, 0) rotate(-3deg) scale(1);
+	}
+	33% {
+		transform: translate3d(-4%, -2.5%, 0) rotate(2deg) scale(1.08);
+	}
+	66% {
+		transform: translate3d(3%, 2%, 0) rotate(-2.5deg) scale(0.95);
+	}
+}
+@keyframes smokeDriftMid {
+	0%,
+	100% {
+		transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+	}
+	50% {
+		transform: translate3d(-6%, 3%, 0) rotate(4deg) scale(1.1);
+	}
+}
+@keyframes smokeDriftFront {
+	0%,
+	100% {
+		transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+	}
+	40% {
+		transform: translate3d(5%, -3%, 0) rotate(-5deg) scale(1.12);
+	}
+	80% {
+		transform: translate3d(-3%, 2.5%, 0) rotate(3deg) scale(0.92);
+	}
+}
+
+/* Cursor swirl — each plume reads --cursor-x/y and translates toward
+ * (or away from) the cursor; layered offsets give parallax. */
+.smoke-swirl {
+	position: absolute;
+	inset: 0;
+	transform: translate3d(
+		calc(
+			(var(--cursor-x) - 0.5) *
+			var(--swirl-offset, 30px) *
+			var(--swirl-mode) *
+			var(--swirl-strength)
+		),
+		calc(
+			(var(--cursor-y) - 0.5) *
+			var(--swirl-offset, 30px) *
+			var(--swirl-mode) *
+			var(--swirl-strength)
+		),
+		0
+	);
+	transition: transform 400ms var(--ease-out);
+	will-change: transform;
+}
+.plume-back .smoke-swirl {
+	--swirl-offset: 14px;
+}
+.plume-mid .smoke-swirl {
+	--swirl-offset: 28px;
+}
+.plume-front .smoke-swirl {
+	--swirl-offset: 46px;
+}
+
+/* Backlit dust motes — the "air has particles in it" cue. Count/positions
+ * are spawned from JS (18 particles). */
+.dust {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 2;
+	opacity: calc(var(--fx-intensity) * 0.8);
+}
+.dust i {
+	position: absolute;
+	width: 2px;
+	height: 2px;
+	border-radius: 50%;
+	background: oklch(0.98 0.01 245);
+	box-shadow: 0 0 4px 1px oklch(0.85 0.08 245 / 80%);
+	animation: dustFloat var(--d, 20s) linear infinite;
+	animation-delay: var(--del, 0s);
+	opacity: 0;
+}
+html.light .dust i {
+	background: oklch(0.5 0.02 85);
+	box-shadow: 0 0 4px 1px oklch(0.7 0.04 85 / 60%);
+}
+@keyframes dustFloat {
+	0% {
+		transform: translate3d(0, 0, 0) scale(0.8);
+		opacity: 0;
+	}
+	15% {
+		opacity: 1;
+	}
+	85% {
+		opacity: 1;
+	}
+	100% {
+		transform: translate3d(
+				calc(var(--tx, -40px) * 1),
+				calc(var(--ty, -30px) * 1),
+				0
+			)
+			scale(1.2);
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.plume-back,
+	.plume-mid,
+	.plume-front {
+		animation: none;
+	}
+	.smoke-swirl {
+		transition: none;
+	}
+	.dust i {
+		animation: none;
+		opacity: 0.5;
+	}
+}
+
+/* ---------- Right — product screenshot w/ 3D tilt ---------- */
+.mock-wrap {
+	padding: 12px 24px 12px 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 0;
+	perspective: 1800px;
+	perspective-origin: 50% 50%;
+	/* Transparent so atmospheric smoke behind bleeds into the product frame
+	 * and wraps around the screenshot. The subtle floor-glow radial is retained
+	 * as a soft anchor under the product. */
+	background: radial-gradient(
+		circle at 50% 50%,
+		color-mix(in oklch, var(--foreground) 4%, transparent) 0%,
+		transparent 60%
+	);
+	overflow: visible;
+	position: relative;
+	/* Above the atmos layer (0–2) so the screenshot sits on top of smoke. */
+	z-index: 3;
+	will-change: transform;
+}
+.mock-stage {
+	/* Fill column width, but cap so derived height never exceeds viewport.
+	 * Available vertical = 100vh − rail(48) − vertical padding(24) = 100vh − 72px.
+	 * Multiply by the image aspect ratio to get the matching width cap. */
+	width: 100%;
+	max-width: calc((100vh - 72px) * 2600 / 1620);
+	aspect-ratio: 2600 / 1620;
+	position: relative;
+	border-radius: 12px;
+	/* Clip anything that pokes past the 12px corners — the .shot border,
+	 * 1px-mask ::after ring, and any residual 1px artifact on the screenshot.
+	 * The stage's own box-shadow below is unaffected (it's painted outside
+	 * the element's box, so overflow:hidden doesn't clip it). */
+	overflow: hidden;
+	/* Shadow moved here from .shot so overflow:hidden doesn't eat it. */
+	box-shadow:
+		0 50px 100px -40px oklch(0 0 0 / 60%),
+		0 14px 40px -14px oklch(0 0 0 / 35%);
+	transform-style: preserve-3d;
+	transition: transform 320ms var(--ease-out);
+	will-change: transform;
+	/* Magic Card — cursor-tracked spotlight + border glow.
+	 * --mx / --my are set from JS (px relative to stage top-left). */
+	--mx: -500px;
+	--my: -500px;
+	--magic-spot-size: 340px;
+	/* Monochrome spotlight & border glow — matches Helmor's palette. */
+	--magic-spot-color: oklch(1 0 0 / 18%);
+	--magic-border-core: oklch(1 0 0 / 95%);
+	--magic-border-edge: oklch(1 0 0 / 25%);
+}
+html.light .mock-stage {
+	/* Light mode: spotlight AND border are LIGHT — a white bloom that
+	 * lifts the surface, with a bright white edge where the light grazes. */
+	--magic-spot-color: oklch(1 0 0 / 55%);
+	--magic-border-core: oklch(1 0 0 / 95%);
+	--magic-border-edge: oklch(1 0 0 / 30%);
+}
+/* Magic Card hover highlight — spotlight fill + glowing gradient border.
+ * DISABLED per design feedback: the bright hover spot fights the atmospheric
+ * smoke/burst system (dark-mode white bloom reads as a blob, light-mode
+ * bright edge reads as a smudge). To re-enable, uncomment all four rules
+ * below. The supporting JS (--mx/--my writes, .hovering class toggle) and
+ * the --magic-* CSS vars are kept intact so flipping this back on is a
+ * single edit. */
+/*
+.mock-stage::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: 12px;
+	background: radial-gradient(
+		var(--magic-spot-size) circle at var(--mx) var(--my),
+		var(--magic-spot-color),
+		transparent 70%
+	);
+	opacity: 0;
+	transition: opacity 260ms var(--ease-out);
+	pointer-events: none;
+	z-index: 4;
+	mix-blend-mode: screen;
+}
+.mock-stage.hovering::before {
+	opacity: 1;
+}
+.mock-stage::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: 12px;
+	padding: 1px;
+	background: radial-gradient(
+		calc(var(--magic-spot-size) * 1.2) circle at var(--mx) var(--my),
+		var(--magic-border-core) 0%,
+		var(--magic-border-edge) 45%,
+		transparent 75%
+	);
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask-composite: exclude;
+	opacity: 0;
+	transition: opacity 260ms var(--ease-out);
+	pointer-events: none;
+	z-index: 5;
+}
+.mock-stage.hovering::after {
+	opacity: 0.9;
+}
+*/
+.shot {
+	position: absolute;
+	inset: 0;
+	border-radius: 12px;
+	overflow: hidden;
+	background: var(--card);
+	border: 1px solid var(--border);
+	/* Drop-shadow lives on .mock-stage (so its overflow:hidden doesn't
+	 * truncate it). .shot keeps the border + background + rounding. */
+	backface-visibility: hidden;
+}
+/* biome-ignore lint/style/noDescendingSpecificity: targets a different ancestor than .rail .brand img */
+.shot img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	object-position: center;
+	border-radius: 12px;
+	user-select: none;
+	-webkit-user-drag: none;
+	pointer-events: none;
+}
+.shot.dark-layer {
+	z-index: 1;
+}
+.shot.light-layer {
+	z-index: 2;
+	clip-path: inset(0 0 0 var(--reveal, 0%));
+	transition: clip-path 420ms var(--ease-out);
+}
+/* --reveal is driven by the <html> theme class rather than a React inline
+ * style. Because the pre-hydration bootstrap sets this class BEFORE the first
+ * style resolution, the first computed --reveal value is already correct and
+ * no clip-path transition fires on load. The transition still fires on
+ * subsequent toggle clicks because then the class *does* change. */
+html.dark .mock-stage {
+	--reveal: 100%;
+}
+html.light .mock-stage {
+	--reveal: 0%;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+	.stage {
+		grid-template-columns: 1fr;
+		grid-template-rows: auto 1fr;
+	}
+	.pitch {
+		padding: 40px 32px;
+		border-right: none;
+		/* Stacked layout — center every item on the cross axis so the
+		 * changelog chip, hero, sub copy, CTAs, and meta row line up as a
+		 * visually balanced column instead of hugging the left edge. */
+		align-items: center;
+		text-align: center;
+	}
+	.mock-wrap {
+		/* Desktop uses asymmetric 24 / 0 to align the mock's left edge with
+		 * the text column's right edge. Once stacked that asymmetry turns
+		 * into a visible lean. Match the pitch's side padding. */
+		padding: 12px 32px;
+	}
+	/* Stacked layout — switch the pitch readability mask from left→right to
+	 * top→bottom. Hero copy sits above the product mock now, so the smoke
+	 * should fade in from the bottom of the pitch into the mock-wrap below
+	 * instead of being walled off on the left side. */
+	.pitch::before {
+		background: linear-gradient(
+			to bottom,
+			var(--background) 0%,
+			color-mix(in oklch, var(--background) 85%, transparent) 55%,
+			color-mix(in oklch, var(--background) 35%, transparent) 85%,
+			transparent 100%
+		);
+	}
+}
+@media (max-height: 700px) {
+	.pitch {
+		padding: 32px 36px;
+		gap: 16px;
+	}
+	h1.hero {
+		font-size: clamp(30px, 3.2vw, 44px);
+	}
+}

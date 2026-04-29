@@ -1,0 +1,63 @@
+[
+	{
+		"id": "uuid_19",
+		"role": "assistant",
+		"content": "{\"item\":{\"id\":\"msg_1\",\"memory_citation\":null,\"phase\":\"commentary\",\"text\":\"I’m reading `package.json` directly so I can summarize the defined npm scripts without making any changes.\",\"type\":\"agent_message\"},\"type\":\"item.completed\"}",
+		"parsed_content": {
+			"item": {
+				"id": "msg_1",
+				"memory_citation": null,
+				"phase": "commentary",
+				"text": "I’m reading `package.json` directly so I can summarize the defined npm scripts without making any changes.",
+				"type": "agent_message"
+			},
+			"type": "item.completed"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_20",
+		"role": "assistant",
+		"content": "{\"item\":{\"aggregated_output\":\"{\\n\\t\\\"name\\\": \\\"fixture-dummy-repo\\\",\\n\\t\\\"version\\\": \\\"0.1.0\\\",\\n\\t\\\"private\\\": true,\\n\\t\\\"type\\\": \\\"module\\\",\\n\\t\\\"scripts\\\": {\\n\\t\\t\\\"build\\\": \\\"tsc -p tsconfig.json\\\",\\n\\t\\t\\\"lint\\\": \\\"node scripts/check-config.mjs\\\",\\n\\t\\t\\\"test\\\": \\\"node --test\\\"\\n\\t},\\n\\t\\\"devDependencies\\\": {\\n\\t\\t\\\"typescript\\\": \\\"^5.8.3\\\"\\n\\t}\\n}\\n\",\"command\":\"/bin/zsh -lc 'cat package.json'\",\"command_actions\":[{\"command\":\"cat package.json\",\"name\":\"package.json\",\"path\":\"$DUMMY_REPO/package.json\",\"type\":\"read\"}],\"cwd\":\"$DUMMY_REPO\",\"duration_ms\":0,\"exit_code\":0,\"id\":\"call_1\",\"process_id\":\"53318\",\"source\":\"unifiedExecStartup\",\"status\":\"completed\",\"type\":\"command_execution\"},\"type\":\"item.completed\"}",
+		"parsed_content": {
+			"item": {
+				"aggregated_output": "{\n\t\"name\": \"fixture-dummy-repo\",\n\t\"version\": \"0.1.0\",\n\t\"private\": true,\n\t\"type\": \"module\",\n\t\"scripts\": {\n\t\t\"build\": \"tsc -p tsconfig.json\",\n\t\t\"lint\": \"node scripts/check-config.mjs\",\n\t\t\"test\": \"node --test\"\n\t},\n\t\"devDependencies\": {\n\t\t\"typescript\": \"^5.8.3\"\n\t}\n}\n",
+				"command": "/bin/zsh -lc 'cat package.json'",
+				"command_actions": [
+					{
+						"command": "cat package.json",
+						"name": "package.json",
+						"path": "$DUMMY_REPO/package.json",
+						"type": "read"
+					}
+				],
+				"cwd": "$DUMMY_REPO",
+				"duration_ms": 0,
+				"exit_code": 0,
+				"id": "call_1",
+				"process_id": "53318",
+				"source": "unifiedExecStartup",
+				"status": "completed",
+				"type": "command_execution"
+			},
+			"type": "item.completed"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_21",
+		"role": "assistant",
+		"content": "{\"item\":{\"id\":\"msg_2\",\"memory_citation\":null,\"phase\":\"final_answer\",\"text\":\"`package.json` contains three scripts:\\n\\n- `build`: runs TypeScript compilation with `tsc -p tsconfig.json`.\\n- `lint`: runs a custom config check via `node scripts/check-config.mjs`.\\n- `test`: runs the Node test runner with `node --test`.\\n\\nThe file also marks the package as private, uses ESM (`\\\"type\\\": \\\"module\\\"`), and only lists `typescript` as a dev dependency.\",\"type\":\"agent_message\"},\"type\":\"item.completed\"}",
+		"parsed_content": {
+			"item": {
+				"id": "msg_2",
+				"memory_citation": null,
+				"phase": "final_answer",
+				"text": "`package.json` contains three scripts:\n\n- `build`: runs TypeScript compilation with `tsc -p tsconfig.json`.\n- `lint`: runs a custom config check via `node scripts/check-config.mjs`.\n- `test`: runs the Node test runner with `node --test`.\n\nThe file also marks the package as private, uses ESM (`\"type\": \"module\"`), and only lists `typescript` as a dev dependency.",
+				"type": "agent_message"
+			},
+			"type": "item.completed"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	}
+]

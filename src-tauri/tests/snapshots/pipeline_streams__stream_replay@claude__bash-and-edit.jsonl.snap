@@ -1,0 +1,275 @@
+---
+source: tests/pipeline_streams.rs
+expression: snapshot
+input_file: tests/fixtures/streams/claude/bash-and-edit.jsonl
+---
+line_count: 161
+checkpoint_count: 26
+checkpoints:
+  - line_index: 0
+    event_type: system
+    roles: []
+    last_part_types: []
+  - line_index: 1
+    event_type: system
+    roles: []
+    last_part_types: []
+  - line_index: 2
+    event_type: rate_limit_event
+    roles: []
+    last_part_types: []
+  - line_index: 6
+    event_type: assistant
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+  - line_index: 27
+    event_type: assistant
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+  - line_index: 31
+    event_type: user
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+  - line_index: 32
+    event_type: system
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+  - line_index: 41
+    event_type: assistant
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - tool-call
+  - line_index: 48
+    event_type: user
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 49
+    event_type: assistant
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 54
+    event_type: user
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 59
+    event_type: assistant
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 62
+    event_type: user
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 64
+    event_type: system
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 74
+    event_type: assistant
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 79
+    event_type: user
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 84
+    event_type: assistant
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 89
+    event_type: user
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 94
+    event_type: assistant
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 97
+    event_type: user
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 99
+    event_type: system
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+  - line_index: 138
+    event_type: assistant
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+      - tool-call
+  - line_index: 142
+    event_type: user
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+      - tool-call
+  - line_index: 143
+    event_type: system
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+      - tool-call
+  - line_index: 155
+    event_type: assistant
+    roles:
+      - assistant
+    last_part_types:
+      - reasoning
+      - tool-call
+      - collapsed-group
+      - tool-call
+      - text
+  - line_index: 159
+    event_type: result
+    roles:
+      - assistant
+      - system
+    last_part_types:
+      - text
+final_state:
+  message_count: 2
+  roles:
+    - assistant
+    - system
+  total_parts: 6
+persisted_turns:
+  turn_count: 17
+  total_blocks: 18
+  turns:
+    - role: assistant
+      block_types:
+        - thinking
+        - tool_use
+    - role: user
+      block_types:
+        - tool_result
+    - role: assistant
+      block_types:
+        - tool_use
+    - role: user
+      block_types:
+        - tool_result
+    - role: assistant
+      block_types:
+        - tool_use
+    - role: user
+      block_types:
+        - tool_result
+    - role: assistant
+      block_types:
+        - tool_use
+    - role: user
+      block_types:
+        - tool_result
+    - role: assistant
+      block_types:
+        - tool_use
+    - role: user
+      block_types:
+        - tool_result
+    - role: assistant
+      block_types:
+        - tool_use
+    - role: user
+      block_types:
+        - tool_result
+    - role: assistant
+      block_types:
+        - tool_use
+    - role: user
+      block_types:
+        - tool_result
+    - role: assistant
+      block_types:
+        - tool_use
+    - role: user
+      block_types:
+        - tool_result
+    - role: assistant
+      block_types:
+        - text
+historical_render:
+  message_count: 1
+  messages:
+    - role: assistant
+      part_types:
+        - reasoning
+        - tool-call
+        - collapsed-group
+        - tool-call
+        - text

@@ -1,0 +1,21 @@
+---
+source: tests/pipeline_fixtures.rs
+expression: messages
+input_file: tests/fixtures/pipeline/claude_commit_analysis/input.json
+---
+- role: assistant
+  id: uuid_1
+  createdAt: "2026-01-01T00:00:00.000Z"
+  content:
+    - type: tool-call
+      toolCallId: toolu_1
+      toolName: Task
+      args:
+        description: Inspect the dummy repo
+        prompt: "Review package.json and docs/notes.md, then report what you find."
+        subagent_type: Explore
+      argsText: "{\"description\":\"Inspect the dummy repo\",\"prompt\":\"Review package.json and docs/notes.md, then report what you find.\",\"subagent_type\":\"Explore\"}"
+      result: "The repo has a small TypeScript setup, a notes document, and safe deterministic fixture content."
+  status:
+    type: complete
+    reason: stop

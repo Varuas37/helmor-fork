@@ -1,0 +1,32 @@
+---
+source: tests/pipeline_fixtures.rs
+expression: messages
+input_file: tests/fixtures/pipeline/schedule_fetch/input.json
+---
+- role: assistant
+  id: uuid_22
+  createdAt: "2026-01-01T00:00:00.000Z"
+  content:
+    - type: reasoning
+      id: "uuid_22:blk:0"
+      text: ""
+    - type: tool-call
+      toolCallId: toolu_1
+      toolName: ToolSearch
+      args:
+        max_results: 1
+        query: "select:TodoWrite"
+      argsText: "{\"max_results\":1,\"query\":\"select:TodoWrite\"}"
+      result: ""
+    - type: todo-list
+      id: "uuid_24:blk:0"
+      items:
+        - text: "Audit src-tauri/tests/fixtures/ for PII, tokens, absolute paths, and real identifiers"
+          status: pending
+        - text: Replace sensitive values with stable placeholders while preserving JSON/JSONL structure
+          status: pending
+        - text: Regenerate insta snapshots and run cargo test --tests to verify fixtures still pass
+          status: pending
+  status:
+    type: complete
+    reason: stop

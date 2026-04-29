@@ -1,0 +1,25 @@
+---
+source: tests/pipeline_fixtures.rs
+expression: messages
+input_file: tests/fixtures/pipeline/codex_commits/input.json
+---
+- role: assistant
+  id: uuid_1
+  createdAt: "2026-01-01T00:00:00.000Z"
+  content:
+    - type: text
+      id: "uuid_1:blk:0"
+      text: "Listing the repository root first, then I’ll summarize the files and directories present."
+    - type: tool-call
+      toolCallId: codex-cmd-uuid_2
+      toolName: Bash
+      args:
+        command: "/bin/zsh -lc 'ls -la'"
+      argsText: "{\"command\":\"/bin/zsh -lc 'ls -la'\"}"
+      result: "total 24\ndrwxr-xr-x@  9 fixture-user  staff  288 Apr 17 14:45 .\ndrwxr-xr-x@  3 fixture-user  staff   96 Apr 17 14:45 ..\ndrwxr-xr-x@ 14 fixture-user  staff  448 Apr 17 14:53 .git\ndrwxr-xr-x@  3 fixture-user  staff   96 Apr 17 14:45 docs\n-rw-r--r--@  1 fixture-user  staff  263 Apr 17 14:45 package.json\n-rw-r--r--@  1 fixture-user  staff   88 Apr 17 14:45 README.md\ndrwxr-xr-x@  3 fixture-user  staff   96 Apr 17 14:45 scripts\ndrwxr-xr-x@  5 fixture-user  staff  160 Apr 17 14:46 src\n-rw-r--r--@  1 fixture-user  staff  238 Apr 17 14:45 tsconfig.json\n"
+    - type: text
+      id: "uuid_3:blk:0"
+      text: "The repository root contains:\n\n- Directories: `.git`, `docs`, `scripts`, `src`\n- Files: `package.json`, `README.md`, `tsconfig.json`\n\nThis looks like a small TypeScript/Node repo with source code in `src`, supporting scripts in `scripts`, and documentation in `docs`."
+  status:
+    type: complete
+    reason: stop

@@ -1,0 +1,27 @@
+{"type":"mcpServer/startupStatus/updated","name":"shadcn","status":"starting","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"codex_apps","status":"starting","error":null,"session_id":"session_1"}
+{"type":"thread/started","thread":{"id":"uuid_1","forkedFromId":null,"preview":"","ephemeral":false,"modelProvider":"openai","createdAt":1776408890,"updatedAt":1776408890,"status":{"type":"idle"},"path":"$CODEX_HOME/sessions/2026/04/17/rollout-2026-04-17T14-54-48-uuid_1.jsonl","cwd":"$DUMMY_REPO","cliVersion":"0.121.0","source":"vscode","agentNickname":null,"agentRole":null,"gitInfo":null,"name":null,"turns":[]},"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"browsermcp","status":"starting","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"context7","status":"starting","error":null,"session_id":"session_1"}
+{"type":"thread/status/changed","threadId":"thread_1","status":{"type":"active","activeFlags":[]},"session_id":"session_1"}
+{"type":"turn/started","threadId":"thread_1","turn":{"id":"uuid_2","items":[],"status":"inProgress","error":null,"startedAt":1776408890,"completedAt":null,"durationMs":null},"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"browsermcp","status":"failed","error":"MCP client for `browsermcp` failed to start: MCP startup failed: handshaking with MCP server failed: connection closed: initialize response","session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"shadcn","status":"failed","error":"MCP client for `shadcn` failed to start: MCP startup failed: handshaking with MCP server failed: connection closed: initialize response","session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"codex_apps","status":"ready","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"context7","status":"ready","error":null,"session_id":"session_1"}
+{"type":"item/started","item":{"type":"userMessage","id":"uuid_3","content":[{"type":"text","text":"Reply with exactly: Fixture smoke test.","text_elements":[]}]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"userMessage","id":"uuid_3","content":[{"type":"text","text":"Reply with exactly: Fixture smoke test.","text_elements":[]}]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"account/rateLimits/updated","rateLimits":{"limitId":"codex","limitName":null,"primary":{"usedPercent":20,"windowDurationMins":300,"resetsAt":1776422527},"secondary":{"usedPercent":30,"windowDurationMins":10080,"resetsAt":1776914276},"credits":null,"planType":"prolite"},"session_id":"session_1"}
+{"type":"item/started","item":{"type":"reasoning","id":"rs_1","summary":[],"content":[]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"reasoning","id":"rs_1","summary":[],"content":[]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/started","item":{"type":"agentMessage","id":"msg_1","text":"","phase":"final_answer","memoryCitation":null},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":"Fixture","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" smoke","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" test","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":".","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"agentMessage","id":"msg_1","text":"Fixture smoke test.","phase":"final_answer","memoryCitation":null},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"thread/tokenUsage/updated","threadId":"thread_1","turnId":"turn_1","tokenUsage":{"total":{"totalTokens":17345,"inputTokens":17315,"cachedInputTokens":3456,"outputTokens":30,"reasoningOutputTokens":20},"last":{"totalTokens":17345,"inputTokens":17315,"cachedInputTokens":3456,"outputTokens":30,"reasoningOutputTokens":20},"modelContextWindow":950000},"session_id":"session_1"}
+{"type":"account/rateLimits/updated","rateLimits":{"limitId":"codex","limitName":null,"primary":{"usedPercent":20,"windowDurationMins":300,"resetsAt":1776422527},"secondary":{"usedPercent":30,"windowDurationMins":10080,"resetsAt":1776914276},"credits":null,"planType":"prolite"},"session_id":"session_1"}
+{"type":"thread/status/changed","threadId":"thread_1","status":{"type":"idle"},"session_id":"session_1"}
+{"type":"turn/completed","threadId":"thread_1","turn":{"id":"uuid_2","items":[],"status":"completed","error":null,"startedAt":1776408890,"completedAt":1776408898,"durationMs":7771},"session_id":"session_1"}
+{"type":"end"}

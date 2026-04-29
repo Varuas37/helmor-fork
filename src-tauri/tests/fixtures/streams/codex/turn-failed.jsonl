@@ -1,0 +1,7 @@
+{"type":"thread/started","thread":{"id":"thread_1","forkedFromId":null,"preview":"","ephemeral":false,"modelProvider":"openai","createdAt":1767225600,"updatedAt":1767225600,"status":{"type":"idle"},"path":"$CODEX_HOME/sessions/2026/01/01/rollout-turn-failed.jsonl","cwd":"$DUMMY_REPO","cliVersion":"test","source":"test","agentNickname":null,"agentRole":null,"gitInfo":null,"name":null,"turns":[]},"session_id":"session_1"}
+{"type":"thread/status/changed","threadId":"thread_1","status":{"type":"active","activeFlags":[]},"session_id":"session_1"}
+{"type":"turn/started","threadId":"thread_1","turn":{"id":"turn_1","items":[],"status":"inProgress","error":null,"startedAt":1776409020,"completedAt":null,"durationMs":null},"session_id":"session_1"}
+{"type":"item/started","item":{"type":"userMessage","id":"uuid_1","content":[{"type":"text","text":"Run a command that fails.","text_elements":[]}]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"userMessage","id":"uuid_1","content":[{"type":"text","text":"Run a command that fails.","text_elements":[]}]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"turn/completed","threadId":"thread_1","turn":{"id":"turn_1","items":[],"status":"failed","error":{"message":"Command exited with status 1"},"startedAt":1776409020,"completedAt":1776409026,"durationMs":6000},"session_id":"session_1"}
+{"type":"end"}

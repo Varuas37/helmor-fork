@@ -1,0 +1,68 @@
+---
+source: tests/pipeline_streams.rs
+expression: snapshot
+input_file: tests/fixtures/streams/codex/command-with-delta.jsonl
+---
+line_count: 140
+checkpoint_count: 6
+checkpoints:
+  - line_index: 12
+    event_type: item/completed
+    roles: []
+    last_part_types: []
+  - line_index: 15
+    event_type: item/completed
+    roles: []
+    last_part_types: []
+  - line_index: 38
+    event_type: item/completed
+    roles:
+      - assistant
+    last_part_types:
+      - text
+  - line_index: 42
+    event_type: item/completed
+    roles:
+      - assistant
+    last_part_types:
+      - text
+      - tool-call
+  - line_index: 134
+    event_type: item/completed
+    roles:
+      - assistant
+    last_part_types:
+      - text
+      - tool-call
+      - text
+  - line_index: 138
+    event_type: turn/completed
+    roles:
+      - assistant
+      - system
+    last_part_types:
+      - text
+final_state:
+  message_count: 2
+  roles:
+    - assistant
+    - system
+  total_parts: 4
+persisted_turns:
+  turn_count: 3
+  total_blocks: 0
+  turns:
+    - role: assistant
+      block_types: []
+    - role: assistant
+      block_types: []
+    - role: assistant
+      block_types: []
+historical_render:
+  message_count: 1
+  messages:
+    - role: assistant
+      part_types:
+        - text
+        - tool-call
+        - text

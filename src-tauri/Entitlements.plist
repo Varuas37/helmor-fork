@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		The 3-key minimum for shipping a JIT runtime (Bun / V8 / JSC) under
+		macOS hardened runtime. Same set electron-builder applies by default
+		and what Grafana k6-studio / PicGo / etc. actually ship.
+
+		Without these, Bun's JSC fails at spawn with
+		"Ran out of executable memory while allocating N bytes".
+	-->
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+	<true/>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

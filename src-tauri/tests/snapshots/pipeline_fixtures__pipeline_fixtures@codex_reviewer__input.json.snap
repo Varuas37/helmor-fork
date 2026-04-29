@@ -1,0 +1,25 @@
+---
+source: tests/pipeline_fixtures.rs
+expression: messages
+input_file: tests/fixtures/pipeline/codex_reviewer/input.json
+---
+- role: assistant
+  id: uuid_19
+  createdAt: "2026-01-01T00:00:00.000Z"
+  content:
+    - type: text
+      id: "uuid_19:blk:0"
+      text: "I’m reading `package.json` directly so I can summarize the defined npm scripts without making any changes."
+    - type: tool-call
+      toolCallId: codex-cmd-uuid_20
+      toolName: Bash
+      args:
+        command: "/bin/zsh -lc 'cat package.json'"
+      argsText: "{\"command\":\"/bin/zsh -lc 'cat package.json'\"}"
+      result: "{\n\t\"name\": \"fixture-dummy-repo\",\n\t\"version\": \"0.1.0\",\n\t\"private\": true,\n\t\"type\": \"module\",\n\t\"scripts\": {\n\t\t\"build\": \"tsc -p tsconfig.json\",\n\t\t\"lint\": \"node scripts/check-config.mjs\",\n\t\t\"test\": \"node --test\"\n\t},\n\t\"devDependencies\": {\n\t\t\"typescript\": \"^5.8.3\"\n\t}\n}\n"
+    - type: text
+      id: "uuid_21:blk:0"
+      text: "`package.json` contains three scripts:\n\n- `build`: runs TypeScript compilation with `tsc -p tsconfig.json`.\n- `lint`: runs a custom config check via `node scripts/check-config.mjs`.\n- `test`: runs the Node test runner with `node --test`.\n\nThe file also marks the package as private, uses ESM (`\"type\": \"module\"`), and only lists `typescript` as a dev dependency."
+  status:
+    type: complete
+    reason: stop

@@ -1,0 +1,28 @@
+name: Prepare Bundle Binaries
+description: Build the Bun sidecar and bundled CLI companion, then stage both under the Tauri externalBin names for the selected target.
+
+inputs:
+  target-triple:
+    description: |
+      Rust target triple suffix used by Tauri externalBin. Defaults are
+      wrong for Windows / macOS, so callers from publish workflows MUST
+      set this explicitly. Defaults to x86_64-unknown-linux-gnu to keep
+      the existing Linux rust-test job working without changes.
+    required: false
+    default: x86_64-unknown-linux-gnu
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust target for bundled CLI
+      shell: bash
+      run: rustup target add "${{ inputs.target-triple }}"
+
+    - name: Stage bundle binaries via cross-platform prepare script
+      shell: bash
+      env:
+        # prepare-sidecar.mjs reads this to pick the target triple suffix
+        # instead of asking rustc. Lets runners stage the sidecar + CLI
+        # for the exact bundle target without editing the script.
+        TAURI_TARGET_TRIPLE: ${{ inputs.target-triple }}
+      run: node scripts/prepare-sidecar.mjs

@@ -1,0 +1,38 @@
+name: Setup Rust Tauri
+description: Setup Rust toolchain and cache for macOS Tauri builds
+
+runs:
+  using: composite
+  steps:
+    - name: Configure sccache env
+      shell: bash
+      run: |
+        echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+        # Incremental + sccache fight each other: incremental fingerprints
+        # are host-local and invalidate sccache lookups, so sccache never
+        # hits. Disable incremental in CI only.
+        echo "CARGO_INCREMENTAL=0" >> "$GITHUB_ENV"
+
+    - name: Setup Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Rust artifacts
+      uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+        cache-workspace-crates: true
+        shared-key: macos-tauri-v1
+        workspaces: src-tauri -> target
+
+    # Persist sccache's default object cache to complement rust-cache's
+    # target/ cache. Handles build scripts and recompiles where cargo's
+    # fingerprint changes but individual rustc invocations are identical.
+    - name: Cache sccache objects
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Caches/Mozilla.sccache
+        key: sccache-macos-${{ hashFiles('src-tauri/Cargo.lock') }}
+        restore-keys: sccache-macos-
+
+    - name: Install cargo-nextest
+      uses: taiki-e/install-action@nextest

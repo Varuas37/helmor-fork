@@ -1,0 +1,7 @@
+{"type":"thread/started","thread":{"id":"thread_1","forkedFromId":null,"preview":"","ephemeral":false,"modelProvider":"openai","createdAt":1767225600,"updatedAt":1767225600,"status":{"type":"idle"},"path":"$CODEX_HOME/sessions/2026/01/01/rollout-plan-mode.jsonl","cwd":"$DUMMY_REPO","cliVersion":"test","source":"test","agentNickname":null,"agentRole":null,"gitInfo":null,"name":null,"turns":[]},"session_id":"session_1"}
+{"type":"thread/status/changed","threadId":"thread_1","status":{"type":"active","activeFlags":[]},"session_id":"session_1"}
+{"type":"turn/started","threadId":"thread_1","turn":{"id":"turn_1","items":[],"status":"inProgress","error":null,"startedAt":1776409010,"completedAt":null,"durationMs":null},"session_id":"session_1"}
+{"type":"turn/plan/updated","threadId":"thread_1","turnId":"turn_1","plan":[{"step":"Audit fixtures","status":"completed"},{"step":"Sanitize captured content","status":"inProgress"},{"step":"Refresh snapshots","status":"pending"}],"session_id":"session_1"}
+{"type":"thread/status/changed","threadId":"thread_1","status":{"type":"idle"},"session_id":"session_1"}
+{"type":"turn/completed","threadId":"thread_1","turn":{"id":"turn_1","items":[],"status":"completed","error":null,"startedAt":1776409010,"completedAt":1776409015,"durationMs":5000},"session_id":"session_1"}
+{"type":"end"}

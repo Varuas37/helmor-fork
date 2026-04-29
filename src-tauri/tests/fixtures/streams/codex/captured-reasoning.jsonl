@@ -1,0 +1,86 @@
+{"type":"thread/started","thread":{"id":"uuid_1","forkedFromId":null,"preview":"","ephemeral":false,"modelProvider":"openai","createdAt":1776408951,"updatedAt":1776408951,"status":{"type":"idle"},"path":"$CODEX_HOME/sessions/2026/04/17/rollout-2026-04-17T14-55-48-uuid_1.jsonl","cwd":"$DUMMY_REPO","cliVersion":"0.121.0","source":"vscode","agentNickname":null,"agentRole":null,"gitInfo":null,"name":null,"turns":[]},"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"browsermcp","status":"starting","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"codex_apps","status":"starting","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"shadcn","status":"starting","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"context7","status":"starting","error":null,"session_id":"session_1"}
+{"type":"thread/status/changed","threadId":"thread_1","status":{"type":"active","activeFlags":[]},"session_id":"session_1"}
+{"type":"turn/started","threadId":"thread_1","turn":{"id":"uuid_2","items":[],"status":"inProgress","error":null,"startedAt":1776408951,"completedAt":null,"durationMs":null},"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"shadcn","status":"failed","error":"MCP client for `shadcn` failed to start: MCP startup failed: handshaking with MCP server failed: connection closed: initialize response","session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"browsermcp","status":"failed","error":"MCP client for `browsermcp` failed to start: MCP startup failed: handshaking with MCP server failed: connection closed: initialize response","session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"context7","status":"ready","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"codex_apps","status":"ready","error":null,"session_id":"session_1"}
+{"type":"item/started","item":{"type":"userMessage","id":"uuid_3","content":[{"type":"text","text":"Think step by step about why this dummy repo is safe for fixture recording, then answer in two short sentences without using tools.","text_elements":[]}]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"userMessage","id":"uuid_3","content":[{"type":"text","text":"Think step by step about why this dummy repo is safe for fixture recording, then answer in two short sentences without using tools.","text_elements":[]}]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"account/rateLimits/updated","rateLimits":{"limitId":"codex","limitName":null,"primary":{"usedPercent":21,"windowDurationMins":300,"resetsAt":1776422527},"secondary":{"usedPercent":30,"windowDurationMins":10080,"resetsAt":1776914276},"credits":null,"planType":"prolite"},"session_id":"session_1"}
+{"type":"item/started","item":{"type":"reasoning","id":"rs_1","summary":[],"content":[]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"reasoning","id":"rs_1","summary":[],"content":[]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/started","item":{"type":"agentMessage","id":"msg_1","text":"","phase":"final_answer","memoryCitation":null},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":"It","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" is","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" likely","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" safe","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" for","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" fixture","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" recording","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" because","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" a","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" dummy","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" fixture","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" repo","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" is","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" intended","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" to","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" contain","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" only","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" synthetic","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" test","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" data","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":",","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" minimal","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" history","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":",","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" and","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" no","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" production","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" credentials","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" or","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" user","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" data","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":".","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" That","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" conclusion","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" depends","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" on","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" the","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" repo","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" actually","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" being","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" dummy","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":"-only","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":";","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" if","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" any","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" real","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" secrets","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":",","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" tokens","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":",","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" or","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" proprietary","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" files","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" were","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" added","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":",","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" it","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" would","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" no","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" longer","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" be","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" safe","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":".","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"agentMessage","id":"msg_1","text":"It is likely safe for fixture recording because a dummy fixture repo is intended to contain only synthetic test data, minimal history, and no production credentials or user data. That conclusion depends on the repo actually being dummy-only; if any real secrets, tokens, or proprietary files were added, it would no longer be safe.","phase":"final_answer","memoryCitation":null},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"thread/tokenUsage/updated","threadId":"thread_1","turnId":"turn_1","tokenUsage":{"total":{"totalTokens":17566,"inputTokens":17332,"cachedInputTokens":3456,"outputTokens":234,"reasoningOutputTokens":165},"last":{"totalTokens":17566,"inputTokens":17332,"cachedInputTokens":3456,"outputTokens":234,"reasoningOutputTokens":165},"modelContextWindow":950000},"session_id":"session_1"}
+{"type":"account/rateLimits/updated","rateLimits":{"limitId":"codex","limitName":null,"primary":{"usedPercent":21,"windowDurationMins":300,"resetsAt":1776422527},"secondary":{"usedPercent":30,"windowDurationMins":10080,"resetsAt":1776914276},"credits":null,"planType":"prolite"},"session_id":"session_1"}
+{"type":"thread/status/changed","threadId":"thread_1","status":{"type":"idle"},"session_id":"session_1"}
+{"type":"turn/completed","threadId":"thread_1","turn":{"id":"uuid_2","items":[],"status":"completed","error":null,"startedAt":1776408951,"completedAt":1776408961,"durationMs":10361},"session_id":"session_1"}
+{"type":"end"}

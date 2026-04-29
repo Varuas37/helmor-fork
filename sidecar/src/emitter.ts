@@ -1,0 +1,377 @@
+/**
+ * Strict types for the sidecar's wire protocol + the typed emitter that
+ * produces them.
+ *
+ * Control events (ready/end/aborted/error/stopped/pong/titleGenerated) are
+ * fully typed. SDK passthrough events carry arbitrary fields from the
+ * underlying provider SDK and go through `SidecarEmitter.passthrough`,
+ * which guarantees `id` is always our request id (never overridden by an
+ * SDK-supplied field of the same name).
+ */
+
+export type ReadyEvent = { readonly type: "ready"; readonly version: number };
+
+export type EndEvent = { readonly id: string; readonly type: "end" };
+
+export type AbortedEvent = {
+	readonly id: string;
+	readonly type: "aborted";
+	readonly reason: string;
+};
+
+export type ErrorEvent =
+	| {
+			readonly id: string;
+			readonly type: "error";
+			readonly message: string;
+			readonly internal?: boolean;
+	  }
+	| {
+			readonly type: "error";
+			readonly message: string;
+			readonly internal?: boolean;
+	  };
+
+export type StoppedEvent = {
+	readonly id: string;
+	readonly type: "stopped";
+	readonly sessionId: string;
+};
+
+export type SteeredEvent = {
+	readonly id: string;
+	readonly type: "steered";
+	readonly sessionId: string;
+	readonly accepted: boolean;
+	readonly reason?: string;
+};
+
+export type PongEvent = { readonly id: string; readonly type: "pong" };
+
+/**
+ * Liveness ping — emitted every ~15s while a stream is active. Used by the
+ * Rust side to detect a hung/frozen sidecar vs. one that's legitimately
+ * waiting on a long-running tool. Carries no payload; only presence matters.
+ */
+export type HeartbeatEvent = {
+	readonly id: string;
+	readonly type: "heartbeat";
+};
+
+export type TitleGeneratedEvent = {
+	readonly id: string;
+	readonly type: "titleGenerated";
+	readonly title: string;
+	readonly branchName: string | undefined;
+};
+
+export type SlashCommandEntry = {
+	readonly name: string;
+	readonly description: string;
+	readonly argumentHint: string | undefined;
+	readonly source: "builtin" | "skill";
+};
+
+export type SlashCommandsListedEvent = {
+	readonly id: string;
+	readonly type: "slashCommandsListed";
+	readonly commands: readonly SlashCommandEntry[];
+};
+
+export type PermissionRequestEvent = {
+	readonly id: string;
+	readonly type: "permissionRequest";
+	readonly permissionId: string;
+	readonly toolName: string;
+	readonly toolInput: Record<string, unknown>;
+	readonly title: string | undefined;
+	readonly description: string | undefined;
+};
+
+export type ElicitationRequestEvent = {
+	readonly id: string;
+	readonly type: "elicitationRequest";
+	readonly serverName: string;
+	readonly message: string;
+	readonly mode: "form" | "url" | undefined;
+	readonly url: string | undefined;
+	readonly elicitationId: string | undefined;
+	readonly requestedSchema: Record<string, unknown> | undefined;
+};
+
+export type DeferredToolUseEvent = {
+	readonly id: string;
+	readonly type: "deferredToolUse";
+	readonly toolUseId: string;
+	readonly toolName: string;
+	readonly toolInput: Record<string, unknown>;
+};
+
+export type PermissionModeChangedEvent = {
+	readonly id: string;
+	readonly type: "permissionModeChanged";
+	readonly permissionMode: string;
+};
+
+export type PlanCapturedEvent = {
+	readonly id: string;
+	readonly type: "planCaptured";
+	readonly toolUseId: string;
+	readonly plan: string | null;
+};
+
+export type UserInputRequestEvent = {
+	readonly id: string;
+	readonly type: "userInputRequest";
+	readonly userInputId: string;
+	readonly questions: ReadonlyArray<{
+		readonly question: string;
+		readonly isOther?: boolean;
+	}>;
+};
+
+export type ModelsListedEvent = {
+	readonly id: string;
+	readonly type: "modelsListed";
+	readonly provider: string;
+	readonly models: ReadonlyArray<{
+		readonly id: string;
+		readonly label: string;
+		readonly cliModel: string;
+		readonly effortLevels?: readonly string[];
+	}>;
+};
+
+// Context-window snapshot from the agent SDK. Claude auto-pulls at
+// turn-end; Codex forwards `thread/tokenUsage/updated`. Both ride on
+// the streaming requestId. `meta` is the raw SDK JSON, stringified.
+export type ContextUsageUpdatedEvent = {
+	readonly id: string;
+	readonly type: "contextUsageUpdated";
+	readonly sessionId: string;
+	readonly meta: string | null;
+};
+
+// Ad-hoc response to a `getContextUsage` RPC. Rides on the request's
+// own id (not a stream id) and carries the slim JSON directly — not
+// persisted, frontend caches for 30s.
+export type ContextUsageResultEvent = {
+	readonly id: string;
+	readonly type: "contextUsageResult";
+	readonly meta: string;
+};
+
+export type SidecarControlEvent =
+	| ReadyEvent
+	| EndEvent
+	| AbortedEvent
+	| ErrorEvent
+	| StoppedEvent
+	| SteeredEvent
+	| PongEvent
+	| HeartbeatEvent
+	| TitleGeneratedEvent
+	| SlashCommandsListedEvent
+	| PermissionRequestEvent
+	| ElicitationRequestEvent
+	| DeferredToolUseEvent
+	| PermissionModeChangedEvent
+	| PlanCapturedEvent
+	| ModelsListedEvent
+	| UserInputRequestEvent
+	| ContextUsageUpdatedEvent
+	| ContextUsageResultEvent;
+
+/**
+ * Typed emitter for the sidecar's stdout protocol.
+ *
+ * One method per control-event type so callers can't typo a field name or
+ * forget a required one. `passthrough` is the single escape hatch for
+ * forwarding raw provider SDK messages.
+ */
+export interface SidecarEmitter {
+	ready(version: number): void;
+	end(requestId: string): void;
+	aborted(requestId: string, reason: string): void;
+	error(requestId: string | null, message: string, internal?: boolean): void;
+	stopped(requestId: string, sessionId: string): void;
+	steered(
+		requestId: string,
+		sessionId: string,
+		accepted: boolean,
+		reason?: string,
+	): void;
+	pong(requestId: string): void;
+	heartbeat(requestId: string): void;
+	titleGenerated(
+		requestId: string,
+		title: string,
+		branchName: string | undefined,
+	): void;
+	slashCommandsListed(
+		requestId: string,
+		commands: readonly SlashCommandEntry[],
+	): void;
+	permissionRequest(
+		requestId: string,
+		permissionId: string,
+		toolName: string,
+		toolInput: Record<string, unknown>,
+		title: string | undefined,
+		description: string | undefined,
+	): void;
+	elicitationRequest(
+		requestId: string,
+		serverName: string,
+		message: string,
+		mode: "form" | "url" | undefined,
+		url: string | undefined,
+		elicitationId: string | undefined,
+		requestedSchema: Record<string, unknown> | undefined,
+	): void;
+	deferredToolUse(
+		requestId: string,
+		toolUseId: string,
+		toolName: string,
+		toolInput: Record<string, unknown>,
+	): void;
+	permissionModeChanged(requestId: string, permissionMode: string): void;
+	planCaptured(requestId: string, toolUseId: string, plan: string | null): void;
+	userInputRequest(
+		requestId: string,
+		userInputId: string,
+		questions: ReadonlyArray<{ question: string; isOther?: boolean }>,
+	): void;
+	modelsListed(
+		requestId: string,
+		provider: string,
+		models: ReadonlyArray<{
+			id: string;
+			label: string;
+			cliModel: string;
+			effortLevels?: readonly string[];
+		}>,
+	): void;
+	contextUsageUpdated(
+		requestId: string,
+		sessionId: string,
+		meta: string | null,
+	): void;
+	contextUsageResult(requestId: string, meta: string): void;
+	/**
+	 * Forward a raw provider SDK message. `id` is appended LAST so an SDK
+	 * field named `id` can never override our request id.
+	 */
+	passthrough(requestId: string, message: object): void;
+}
+
+/** Build a `SidecarEmitter` that pushes events through `write`. */
+export function createSidecarEmitter(
+	write: (event: object) => void,
+): SidecarEmitter {
+	return {
+		ready: (version) => write({ type: "ready", version }),
+		end: (requestId) => write({ id: requestId, type: "end" }),
+		aborted: (requestId, reason) =>
+			write({ id: requestId, type: "aborted", reason }),
+		error: (requestId, message, internal) =>
+			write(
+				requestId === null
+					? { type: "error", message, ...(internal ? { internal: true } : {}) }
+					: {
+							id: requestId,
+							type: "error",
+							message,
+							...(internal ? { internal: true } : {}),
+						},
+			),
+		stopped: (requestId, sessionId) =>
+			write({ id: requestId, type: "stopped", sessionId }),
+		steered: (requestId, sessionId, accepted, reason) =>
+			write({
+				id: requestId,
+				type: "steered",
+				sessionId,
+				accepted,
+				...(reason ? { reason } : {}),
+			}),
+		pong: (requestId) => write({ id: requestId, type: "pong" }),
+		heartbeat: (requestId) => write({ id: requestId, type: "heartbeat" }),
+		titleGenerated: (requestId, title, branchName) =>
+			write({ id: requestId, type: "titleGenerated", title, branchName }),
+		slashCommandsListed: (requestId, commands) =>
+			write({ id: requestId, type: "slashCommandsListed", commands }),
+		permissionRequest: (
+			requestId,
+			permissionId,
+			toolName,
+			toolInput,
+			title,
+			description,
+		) =>
+			write({
+				id: requestId,
+				type: "permissionRequest",
+				permissionId,
+				toolName,
+				toolInput,
+				title,
+				description,
+			}),
+		elicitationRequest: (
+			requestId,
+			serverName,
+			message,
+			mode,
+			url,
+			elicitationId,
+			requestedSchema,
+		) =>
+			write({
+				id: requestId,
+				type: "elicitationRequest",
+				serverName,
+				message,
+				mode,
+				url,
+				elicitationId,
+				requestedSchema,
+			}),
+		deferredToolUse: (requestId, toolUseId, toolName, toolInput) =>
+			write({
+				id: requestId,
+				type: "deferredToolUse",
+				toolUseId,
+				toolName,
+				toolInput,
+			}),
+		permissionModeChanged: (requestId, permissionMode) =>
+			write({
+				id: requestId,
+				type: "permissionModeChanged",
+				permissionMode,
+			}),
+		planCaptured: (requestId, toolUseId, plan) =>
+			write({ id: requestId, type: "planCaptured", toolUseId, plan }),
+		userInputRequest: (requestId, userInputId, questions) =>
+			write({
+				id: requestId,
+				type: "userInputRequest",
+				userInputId,
+				questions,
+			}),
+		modelsListed: (requestId, provider, models) =>
+			write({ id: requestId, type: "modelsListed", provider, models }),
+		contextUsageUpdated: (requestId, sessionId, meta) =>
+			write({
+				id: requestId,
+				type: "contextUsageUpdated",
+				sessionId,
+				meta,
+			}),
+		contextUsageResult: (requestId, meta) =>
+			write({ id: requestId, type: "contextUsageResult", meta }),
+		passthrough: (requestId, message) =>
+			write({ ...(message as Record<string, unknown>), id: requestId }),
+	};
+}

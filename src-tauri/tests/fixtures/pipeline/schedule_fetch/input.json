@@ -1,0 +1,195 @@
+[
+	{
+		"id": "uuid_22",
+		"role": "assistant",
+		"content": "{\"message\":{\"content\":[{\"signature\":\"fixture-signature\",\"thinking\":\"\",\"type\":\"thinking\"},{\"caller\":{\"type\":\"direct\"},\"id\":\"toolu_1\",\"input\":{\"max_results\":1,\"query\":\"select:TodoWrite\"},\"name\":\"ToolSearch\",\"type\":\"tool_use\"}],\"context_management\":null,\"id\":\"msg_1\",\"model\":\"claude-opus-4-7\",\"role\":\"assistant\",\"stop_details\":null,\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":13579,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":13579,\"cache_read_input_tokens\":13041,\"inference_geo\":\"not_available\",\"input_tokens\":6,\"output_tokens\":8,\"service_tier\":\"standard\"}},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"type\":\"assistant\",\"uuid\":\"uuid_20\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"signature": "fixture-signature",
+						"thinking": "",
+						"type": "thinking"
+					},
+					{
+						"caller": {
+							"type": "direct"
+						},
+						"id": "toolu_1",
+						"input": {
+							"max_results": 1,
+							"query": "select:TodoWrite"
+						},
+						"name": "ToolSearch",
+						"type": "tool_use"
+					}
+				],
+				"context_management": null,
+				"id": "msg_1",
+				"model": "claude-opus-4-7",
+				"role": "assistant",
+				"stop_details": null,
+				"stop_reason": null,
+				"stop_sequence": null,
+				"type": "message",
+				"usage": {
+					"cache_creation": {
+						"ephemeral_1h_input_tokens": 13579,
+						"ephemeral_5m_input_tokens": 0
+					},
+					"cache_creation_input_tokens": 13579,
+					"cache_read_input_tokens": 13041,
+					"inference_geo": "not_available",
+					"input_tokens": 6,
+					"output_tokens": 8,
+					"service_tier": "standard"
+				}
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"type": "assistant",
+			"uuid": "uuid_20"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_23",
+		"role": "user",
+		"content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_1\",\"content\":[{\"type\":\"tool_reference\",\"tool_name\":\"TodoWrite\"}]}]},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"uuid\":\"uuid_23\",\"timestamp\":\"2026-04-17T07:11:22.672Z\",\"tool_use_result\":{\"matches\":[\"TodoWrite\"],\"query\":\"select:TodoWrite\",\"total_deferred_tools\":21}}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"content": [
+							{
+								"tool_name": "TodoWrite",
+								"type": "tool_reference"
+							}
+						],
+						"tool_use_id": "toolu_1",
+						"type": "tool_result"
+					}
+				],
+				"role": "user"
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"timestamp": "2026-04-17T07:11:22.672Z",
+			"tool_use_result": {
+				"matches": ["TodoWrite"],
+				"query": "select:TodoWrite",
+				"total_deferred_tools": 21
+			},
+			"type": "user",
+			"uuid": "uuid_23"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_24",
+		"role": "assistant",
+		"content": "{\"message\":{\"content\":[{\"caller\":{\"type\":\"direct\"},\"id\":\"toolu_2\",\"input\":{\"todos\":[{\"activeForm\":\"Auditing src-tauri/tests/fixtures/ for PII, tokens, absolute paths, and real identifiers\",\"content\":\"Audit src-tauri/tests/fixtures/ for PII, tokens, absolute paths, and real identifiers\",\"status\":\"pending\"},{\"activeForm\":\"Replacing sensitive values with stable placeholders while preserving JSON/JSONL structure\",\"content\":\"Replace sensitive values with stable placeholders while preserving JSON/JSONL structure\",\"status\":\"pending\"},{\"activeForm\":\"Regenerating insta snapshots and running cargo test --tests to verify fixtures still pass\",\"content\":\"Regenerate insta snapshots and run cargo test --tests to verify fixtures still pass\",\"status\":\"pending\"}]},\"name\":\"TodoWrite\",\"type\":\"tool_use\"}],\"context_management\":null,\"id\":\"msg_2\",\"model\":\"claude-opus-4-7\",\"role\":\"assistant\",\"stop_details\":null,\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":31362,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":31362,\"cache_read_input_tokens\":0,\"inference_geo\":\"not_available\",\"input_tokens\":6,\"output_tokens\":5,\"service_tier\":\"standard\"}},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"type\":\"assistant\",\"uuid\":\"uuid_124\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"caller": {
+							"type": "direct"
+						},
+						"id": "toolu_2",
+						"input": {
+							"todos": [
+								{
+									"activeForm": "Auditing src-tauri/tests/fixtures/ for PII, tokens, absolute paths, and real identifiers",
+									"content": "Audit src-tauri/tests/fixtures/ for PII, tokens, absolute paths, and real identifiers",
+									"status": "pending"
+								},
+								{
+									"activeForm": "Replacing sensitive values with stable placeholders while preserving JSON/JSONL structure",
+									"content": "Replace sensitive values with stable placeholders while preserving JSON/JSONL structure",
+									"status": "pending"
+								},
+								{
+									"activeForm": "Regenerating insta snapshots and running cargo test --tests to verify fixtures still pass",
+									"content": "Regenerate insta snapshots and run cargo test --tests to verify fixtures still pass",
+									"status": "pending"
+								}
+							]
+						},
+						"name": "TodoWrite",
+						"type": "tool_use"
+					}
+				],
+				"context_management": null,
+				"id": "msg_2",
+				"model": "claude-opus-4-7",
+				"role": "assistant",
+				"stop_details": null,
+				"stop_reason": null,
+				"stop_sequence": null,
+				"type": "message",
+				"usage": {
+					"cache_creation": {
+						"ephemeral_1h_input_tokens": 31362,
+						"ephemeral_5m_input_tokens": 0
+					},
+					"cache_creation_input_tokens": 31362,
+					"cache_read_input_tokens": 0,
+					"inference_geo": "not_available",
+					"input_tokens": 6,
+					"output_tokens": 5,
+					"service_tier": "standard"
+				}
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"type": "assistant",
+			"uuid": "uuid_124"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_25",
+		"role": "user",
+		"content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_2\",\"type\":\"tool_result\",\"content\":\"Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable\"}]},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"uuid\":\"uuid_127\",\"timestamp\":\"2026-04-17T07:11:29.047Z\",\"tool_use_result\":{\"oldTodos\":[],\"newTodos\":[{\"content\":\"Audit src-tauri/tests/fixtures/ for PII, tokens, absolute paths, and real identifiers\",\"status\":\"pending\",\"activeForm\":\"Auditing src-tauri/tests/fixtures/ for PII, tokens, absolute paths, and real identifiers\"},{\"content\":\"Replace sensitive values with stable placeholders while preserving JSON/JSONL structure\",\"status\":\"pending\",\"activeForm\":\"Replacing sensitive values with stable placeholders while preserving JSON/JSONL structure\"},{\"content\":\"Regenerate insta snapshots and run cargo test --tests to verify fixtures still pass\",\"status\":\"pending\",\"activeForm\":\"Regenerating insta snapshots and running cargo test --tests to verify fixtures still pass\"}],\"verificationNudgeNeeded\":false}}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"content": "Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable",
+						"tool_use_id": "toolu_2",
+						"type": "tool_result"
+					}
+				],
+				"role": "user"
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"timestamp": "2026-04-17T07:11:29.047Z",
+			"tool_use_result": {
+				"newTodos": [
+					{
+						"activeForm": "Auditing src-tauri/tests/fixtures/ for PII, tokens, absolute paths, and real identifiers",
+						"content": "Audit src-tauri/tests/fixtures/ for PII, tokens, absolute paths, and real identifiers",
+						"status": "pending"
+					},
+					{
+						"activeForm": "Replacing sensitive values with stable placeholders while preserving JSON/JSONL structure",
+						"content": "Replace sensitive values with stable placeholders while preserving JSON/JSONL structure",
+						"status": "pending"
+					},
+					{
+						"activeForm": "Regenerating insta snapshots and running cargo test --tests to verify fixtures still pass",
+						"content": "Regenerate insta snapshots and run cargo test --tests to verify fixtures still pass",
+						"status": "pending"
+					}
+				],
+				"oldTodos": [],
+				"verificationNudgeNeeded": false
+			},
+			"type": "user",
+			"uuid": "uuid_127"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	}
+]

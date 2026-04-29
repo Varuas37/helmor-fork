@@ -1,0 +1,643 @@
+[
+	{
+		"id": "uuid_3",
+		"role": "assistant",
+		"content": "{\"message\":{\"content\":[{\"signature\":\"fixture-signature\",\"thinking\":\"\",\"type\":\"thinking\"},{\"caller\":{\"type\":\"direct\"},\"id\":\"toolu_1\",\"input\":{\"command\":\"ls package.json src/tasks.ts docs/notes.md 2>&1\",\"description\":\"Check if the target files exist\"},\"name\":\"Bash\",\"type\":\"tool_use\"}],\"context_management\":null,\"id\":\"msg_1\",\"model\":\"claude-opus-4-7\",\"role\":\"assistant\",\"stop_details\":null,\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":11860,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":11860,\"cache_read_input_tokens\":13041,\"inference_geo\":\"not_available\",\"input_tokens\":6,\"output_tokens\":0,\"service_tier\":\"standard\"}},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"type\":\"assistant\",\"uuid\":\"uuid_29\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"signature": "fixture-signature",
+						"thinking": "",
+						"type": "thinking"
+					},
+					{
+						"caller": {
+							"type": "direct"
+						},
+						"id": "toolu_1",
+						"input": {
+							"command": "ls package.json src/tasks.ts docs/notes.md 2>&1",
+							"description": "Check if the target files exist"
+						},
+						"name": "Bash",
+						"type": "tool_use"
+					}
+				],
+				"context_management": null,
+				"id": "msg_1",
+				"model": "claude-opus-4-7",
+				"role": "assistant",
+				"stop_details": null,
+				"stop_reason": null,
+				"stop_sequence": null,
+				"type": "message",
+				"usage": {
+					"cache_creation": {
+						"ephemeral_1h_input_tokens": 11860,
+						"ephemeral_5m_input_tokens": 0
+					},
+					"cache_creation_input_tokens": 11860,
+					"cache_read_input_tokens": 13041,
+					"inference_geo": "not_available",
+					"input_tokens": 6,
+					"output_tokens": 0,
+					"service_tier": "standard"
+				}
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"type": "assistant",
+			"uuid": "uuid_29"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_4",
+		"role": "user",
+		"content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"content\":\"EPERM: operation not permitted, mkdir '$CLAUDE_HOME/session-env/uuid_1'\",\"is_error\":true,\"tool_use_id\":\"toolu_1\"}]},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"uuid\":\"uuid_33\",\"timestamp\":\"2026-04-17T07:11:10.383Z\",\"tool_use_result\":\"Error: EPERM: operation not permitted, mkdir '$CLAUDE_HOME/session-env/uuid_1'\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"content": "EPERM: operation not permitted, mkdir '$CLAUDE_HOME/session-env/uuid_1'",
+						"is_error": true,
+						"tool_use_id": "toolu_1",
+						"type": "tool_result"
+					}
+				],
+				"role": "user"
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"timestamp": "2026-04-17T07:11:10.383Z",
+			"tool_use_result": "Error: EPERM: operation not permitted, mkdir '$CLAUDE_HOME/session-env/uuid_1'",
+			"type": "user",
+			"uuid": "uuid_33"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_5",
+		"role": "assistant",
+		"content": "{\"message\":{\"content\":[{\"caller\":{\"type\":\"direct\"},\"id\":\"toolu_2\",\"input\":{\"pattern\":\"package.json\"},\"name\":\"Glob\",\"type\":\"tool_use\"}],\"context_management\":null,\"id\":\"msg_2\",\"model\":\"claude-opus-4-7\",\"role\":\"assistant\",\"stop_details\":null,\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":271,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":271,\"cache_read_input_tokens\":24901,\"inference_geo\":\"not_available\",\"input_tokens\":1,\"output_tokens\":57,\"service_tier\":\"standard\"}},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"type\":\"assistant\",\"uuid\":\"uuid_43\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"caller": {
+							"type": "direct"
+						},
+						"id": "toolu_2",
+						"input": {
+							"pattern": "package.json"
+						},
+						"name": "Glob",
+						"type": "tool_use"
+					}
+				],
+				"context_management": null,
+				"id": "msg_2",
+				"model": "claude-opus-4-7",
+				"role": "assistant",
+				"stop_details": null,
+				"stop_reason": null,
+				"stop_sequence": null,
+				"type": "message",
+				"usage": {
+					"cache_creation": {
+						"ephemeral_1h_input_tokens": 271,
+						"ephemeral_5m_input_tokens": 0
+					},
+					"cache_creation_input_tokens": 271,
+					"cache_read_input_tokens": 24901,
+					"inference_geo": "not_available",
+					"input_tokens": 1,
+					"output_tokens": 57,
+					"service_tier": "standard"
+				}
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"type": "assistant",
+			"uuid": "uuid_43"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_6",
+		"role": "user",
+		"content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_2\",\"type\":\"tool_result\",\"content\":\"package.json\"}]},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"uuid\":\"uuid_50\",\"timestamp\":\"2026-04-17T07:11:14.298Z\",\"tool_use_result\":{\"filenames\":[\"package.json\"],\"durationMs\":6,\"numFiles\":1,\"truncated\":false}}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"content": "package.json",
+						"tool_use_id": "toolu_2",
+						"type": "tool_result"
+					}
+				],
+				"role": "user"
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"timestamp": "2026-04-17T07:11:14.298Z",
+			"tool_use_result": {
+				"durationMs": 6,
+				"filenames": ["package.json"],
+				"numFiles": 1,
+				"truncated": false
+			},
+			"type": "user",
+			"uuid": "uuid_50"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_7",
+		"role": "assistant",
+		"content": "{\"message\":{\"content\":[{\"caller\":{\"type\":\"direct\"},\"id\":\"toolu_3\",\"input\":{\"pattern\":\"src/tasks.ts\"},\"name\":\"Glob\",\"type\":\"tool_use\"}],\"context_management\":null,\"id\":\"msg_2\",\"model\":\"claude-opus-4-7\",\"role\":\"assistant\",\"stop_details\":null,\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":271,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":271,\"cache_read_input_tokens\":24901,\"inference_geo\":\"not_available\",\"input_tokens\":1,\"output_tokens\":57,\"service_tier\":\"standard\"}},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"type\":\"assistant\",\"uuid\":\"uuid_51\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"caller": {
+							"type": "direct"
+						},
+						"id": "toolu_3",
+						"input": {
+							"pattern": "src/tasks.ts"
+						},
+						"name": "Glob",
+						"type": "tool_use"
+					}
+				],
+				"context_management": null,
+				"id": "msg_2",
+				"model": "claude-opus-4-7",
+				"role": "assistant",
+				"stop_details": null,
+				"stop_reason": null,
+				"stop_sequence": null,
+				"type": "message",
+				"usage": {
+					"cache_creation": {
+						"ephemeral_1h_input_tokens": 271,
+						"ephemeral_5m_input_tokens": 0
+					},
+					"cache_creation_input_tokens": 271,
+					"cache_read_input_tokens": 24901,
+					"inference_geo": "not_available",
+					"input_tokens": 1,
+					"output_tokens": 57,
+					"service_tier": "standard"
+				}
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"type": "assistant",
+			"uuid": "uuid_51"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_8",
+		"role": "user",
+		"content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_3\",\"type\":\"tool_result\",\"content\":\"src/tasks.ts\"}]},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"uuid\":\"uuid_56\",\"timestamp\":\"2026-04-17T07:11:14.330Z\",\"tool_use_result\":{\"filenames\":[\"src/tasks.ts\"],\"durationMs\":5,\"numFiles\":1,\"truncated\":false}}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"content": "src/tasks.ts",
+						"tool_use_id": "toolu_3",
+						"type": "tool_result"
+					}
+				],
+				"role": "user"
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"timestamp": "2026-04-17T07:11:14.330Z",
+			"tool_use_result": {
+				"durationMs": 5,
+				"filenames": ["src/tasks.ts"],
+				"numFiles": 1,
+				"truncated": false
+			},
+			"type": "user",
+			"uuid": "uuid_56"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_9",
+		"role": "assistant",
+		"content": "{\"message\":{\"content\":[{\"caller\":{\"type\":\"direct\"},\"id\":\"toolu_4\",\"input\":{\"pattern\":\"docs/notes.md\"},\"name\":\"Glob\",\"type\":\"tool_use\"}],\"context_management\":null,\"id\":\"msg_2\",\"model\":\"claude-opus-4-7\",\"role\":\"assistant\",\"stop_details\":null,\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":271,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":271,\"cache_read_input_tokens\":24901,\"inference_geo\":\"not_available\",\"input_tokens\":1,\"output_tokens\":57,\"service_tier\":\"standard\"}},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"type\":\"assistant\",\"uuid\":\"uuid_61\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"caller": {
+							"type": "direct"
+						},
+						"id": "toolu_4",
+						"input": {
+							"pattern": "docs/notes.md"
+						},
+						"name": "Glob",
+						"type": "tool_use"
+					}
+				],
+				"context_management": null,
+				"id": "msg_2",
+				"model": "claude-opus-4-7",
+				"role": "assistant",
+				"stop_details": null,
+				"stop_reason": null,
+				"stop_sequence": null,
+				"type": "message",
+				"usage": {
+					"cache_creation": {
+						"ephemeral_1h_input_tokens": 271,
+						"ephemeral_5m_input_tokens": 0
+					},
+					"cache_creation_input_tokens": 271,
+					"cache_read_input_tokens": 24901,
+					"inference_geo": "not_available",
+					"input_tokens": 1,
+					"output_tokens": 57,
+					"service_tier": "standard"
+				}
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"type": "assistant",
+			"uuid": "uuid_61"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_10",
+		"role": "user",
+		"content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_4\",\"type\":\"tool_result\",\"content\":\"docs/notes.md\"}]},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"uuid\":\"uuid_64\",\"timestamp\":\"2026-04-17T07:11:14.616Z\",\"tool_use_result\":{\"filenames\":[\"docs/notes.md\"],\"durationMs\":6,\"numFiles\":1,\"truncated\":false}}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"content": "docs/notes.md",
+						"tool_use_id": "toolu_4",
+						"type": "tool_result"
+					}
+				],
+				"role": "user"
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"timestamp": "2026-04-17T07:11:14.616Z",
+			"tool_use_result": {
+				"durationMs": 6,
+				"filenames": ["docs/notes.md"],
+				"numFiles": 1,
+				"truncated": false
+			},
+			"type": "user",
+			"uuid": "uuid_64"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_11",
+		"role": "assistant",
+		"content": "{\"message\":{\"content\":[{\"caller\":{\"type\":\"direct\"},\"id\":\"toolu_5\",\"input\":{\"file_path\":\"package.json\"},\"name\":\"Read\",\"type\":\"tool_use\"}],\"context_management\":null,\"id\":\"msg_3\",\"model\":\"claude-opus-4-7\",\"role\":\"assistant\",\"stop_details\":null,\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":278,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":278,\"cache_read_input_tokens\":25172,\"inference_geo\":\"not_available\",\"input_tokens\":1,\"output_tokens\":69,\"service_tier\":\"standard\"}},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"type\":\"assistant\",\"uuid\":\"uuid_76\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"caller": {
+							"type": "direct"
+						},
+						"id": "toolu_5",
+						"input": {
+							"file_path": "package.json"
+						},
+						"name": "Read",
+						"type": "tool_use"
+					}
+				],
+				"context_management": null,
+				"id": "msg_3",
+				"model": "claude-opus-4-7",
+				"role": "assistant",
+				"stop_details": null,
+				"stop_reason": null,
+				"stop_sequence": null,
+				"type": "message",
+				"usage": {
+					"cache_creation": {
+						"ephemeral_1h_input_tokens": 278,
+						"ephemeral_5m_input_tokens": 0
+					},
+					"cache_creation_input_tokens": 278,
+					"cache_read_input_tokens": 25172,
+					"inference_geo": "not_available",
+					"input_tokens": 1,
+					"output_tokens": 69,
+					"service_tier": "standard"
+				}
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"type": "assistant",
+			"uuid": "uuid_76"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_12",
+		"role": "user",
+		"content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_5\",\"type\":\"tool_result\",\"content\":\"1\\t{\\n2\\t\\t\\\"name\\\": \\\"fixture-dummy-repo\\\",\\n3\\t\\t\\\"version\\\": \\\"0.1.0\\\",\\n4\\t\\t\\\"private\\\": true,\\n5\\t\\t\\\"type\\\": \\\"module\\\",\\n6\\t\\t\\\"scripts\\\": {\\n7\\t\\t\\t\\\"build\\\": \\\"tsc -p tsconfig.json\\\",\\n8\\t\\t\\t\\\"lint\\\": \\\"node scripts/check-config.mjs\\\",\\n9\\t\\t\\t\\\"test\\\": \\\"node --test\\\"\\n10\\t\\t},\\n11\\t\\t\\\"devDependencies\\\": {\\n12\\t\\t\\t\\\"typescript\\\": \\\"^5.8.3\\\"\\n13\\t\\t}\\n14\\t}\\n15\\t\"}]},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"uuid\":\"uuid_81\",\"timestamp\":\"2026-04-17T07:11:18.130Z\",\"tool_use_result\":{\"type\":\"text\",\"file\":{\"filePath\":\"package.json\",\"content\":\"{\\n\\t\\\"name\\\": \\\"fixture-dummy-repo\\\",\\n\\t\\\"version\\\": \\\"0.1.0\\\",\\n\\t\\\"private\\\": true,\\n\\t\\\"type\\\": \\\"module\\\",\\n\\t\\\"scripts\\\": {\\n\\t\\t\\\"build\\\": \\\"tsc -p tsconfig.json\\\",\\n\\t\\t\\\"lint\\\": \\\"node scripts/check-config.mjs\\\",\\n\\t\\t\\\"test\\\": \\\"node --test\\\"\\n\\t},\\n\\t\\\"devDependencies\\\": {\\n\\t\\t\\\"typescript\\\": \\\"^5.8.3\\\"\\n\\t}\\n}\\n\",\"numLines\":15,\"startLine\":1,\"totalLines\":15}}}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"content": "1\t{\n2\t\t\"name\": \"fixture-dummy-repo\",\n3\t\t\"version\": \"0.1.0\",\n4\t\t\"private\": true,\n5\t\t\"type\": \"module\",\n6\t\t\"scripts\": {\n7\t\t\t\"build\": \"tsc -p tsconfig.json\",\n8\t\t\t\"lint\": \"node scripts/check-config.mjs\",\n9\t\t\t\"test\": \"node --test\"\n10\t\t},\n11\t\t\"devDependencies\": {\n12\t\t\t\"typescript\": \"^5.8.3\"\n13\t\t}\n14\t}\n15\t",
+						"tool_use_id": "toolu_5",
+						"type": "tool_result"
+					}
+				],
+				"role": "user"
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"timestamp": "2026-04-17T07:11:18.130Z",
+			"tool_use_result": {
+				"file": {
+					"content": "{\n\t\"name\": \"fixture-dummy-repo\",\n\t\"version\": \"0.1.0\",\n\t\"private\": true,\n\t\"type\": \"module\",\n\t\"scripts\": {\n\t\t\"build\": \"tsc -p tsconfig.json\",\n\t\t\"lint\": \"node scripts/check-config.mjs\",\n\t\t\"test\": \"node --test\"\n\t},\n\t\"devDependencies\": {\n\t\t\"typescript\": \"^5.8.3\"\n\t}\n}\n",
+					"filePath": "package.json",
+					"numLines": 15,
+					"startLine": 1,
+					"totalLines": 15
+				},
+				"type": "text"
+			},
+			"type": "user",
+			"uuid": "uuid_81"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_13",
+		"role": "assistant",
+		"content": "{\"message\":{\"content\":[{\"caller\":{\"type\":\"direct\"},\"id\":\"toolu_6\",\"input\":{\"file_path\":\"src/tasks.ts\"},\"name\":\"Read\",\"type\":\"tool_use\"}],\"context_management\":null,\"id\":\"msg_3\",\"model\":\"claude-opus-4-7\",\"role\":\"assistant\",\"stop_details\":null,\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":278,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":278,\"cache_read_input_tokens\":25172,\"inference_geo\":\"not_available\",\"input_tokens\":1,\"output_tokens\":69,\"service_tier\":\"standard\"}},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"type\":\"assistant\",\"uuid\":\"uuid_86\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"caller": {
+							"type": "direct"
+						},
+						"id": "toolu_6",
+						"input": {
+							"file_path": "src/tasks.ts"
+						},
+						"name": "Read",
+						"type": "tool_use"
+					}
+				],
+				"context_management": null,
+				"id": "msg_3",
+				"model": "claude-opus-4-7",
+				"role": "assistant",
+				"stop_details": null,
+				"stop_reason": null,
+				"stop_sequence": null,
+				"type": "message",
+				"usage": {
+					"cache_creation": {
+						"ephemeral_1h_input_tokens": 278,
+						"ephemeral_5m_input_tokens": 0
+					},
+					"cache_creation_input_tokens": 278,
+					"cache_read_input_tokens": 25172,
+					"inference_geo": "not_available",
+					"input_tokens": 1,
+					"output_tokens": 69,
+					"service_tier": "standard"
+				}
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"type": "assistant",
+			"uuid": "uuid_86"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_14",
+		"role": "user",
+		"content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_6\",\"type\":\"tool_result\",\"content\":\"1\\texport type Task = {\\n2\\t\\tid: string;\\n3\\t\\ttitle: string;\\n4\\t\\tdone: boolean;\\n5\\t\\towner?: string;\\n6\\t};\\n7\\t\\n8\\texport const TASKS: Task[] = [\\n9\\t\\t{ id: \\\"task-1\\\", title: \\\"Audit fixtures\\\", done: true, owner: \\\"maintainer\\\" },\\n10\\t\\t{ id: \\\"task-2\\\", title: \\\"Sanitize streams\\\", done: false, owner: \\\"maintainer\\\" },\\n11\\t\\t{ id: \\\"task-3\\\", title: \\\"Regenerate snapshots\\\", done: false, owner: \\\"reviewer\\\" },\\n12\\t];\\n13\\t\\n14\\texport function summarizeTasks(tasks: Task[]): string {\\n15\\t\\tconst complete = tasks.filter((task) => task.done).length;\\n16\\t\\treturn `${complete}/${tasks.length} complete`;\\n17\\t}\\n18\\t\\n19\\texport function openTasks(tasks: Task[]): Task[] {\\n20\\t\\treturn tasks.filter((task) => !task.done);\\n21\\t}\\n22\\t\"}]},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"uuid\":\"uuid_91\",\"timestamp\":\"2026-04-17T07:11:18.528Z\",\"tool_use_result\":{\"type\":\"text\",\"file\":{\"filePath\":\"src/tasks.ts\",\"content\":\"export type Task = {\\n\\tid: string;\\n\\ttitle: string;\\n\\tdone: boolean;\\n\\towner?: string;\\n};\\n\\nexport const TASKS: Task[] = [\\n\\t{ id: \\\"task-1\\\", title: \\\"Audit fixtures\\\", done: true, owner: \\\"maintainer\\\" },\\n\\t{ id: \\\"task-2\\\", title: \\\"Sanitize streams\\\", done: false, owner: \\\"maintainer\\\" },\\n\\t{ id: \\\"task-3\\\", title: \\\"Regenerate snapshots\\\", done: false, owner: \\\"reviewer\\\" },\\n];\\n\\nexport function summarizeTasks(tasks: Task[]): string {\\n\\tconst complete = tasks.filter((task) => task.done).length;\\n\\treturn `${complete}/${tasks.length} complete`;\\n}\\n\\nexport function openTasks(tasks: Task[]): Task[] {\\n\\treturn tasks.filter((task) => !task.done);\\n}\\n\",\"numLines\":22,\"startLine\":1,\"totalLines\":22}}}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"content": "1\texport type Task = {\n2\t\tid: string;\n3\t\ttitle: string;\n4\t\tdone: boolean;\n5\t\towner?: string;\n6\t};\n7\t\n8\texport const TASKS: Task[] = [\n9\t\t{ id: \"task-1\", title: \"Audit fixtures\", done: true, owner: \"maintainer\" },\n10\t\t{ id: \"task-2\", title: \"Sanitize streams\", done: false, owner: \"maintainer\" },\n11\t\t{ id: \"task-3\", title: \"Regenerate snapshots\", done: false, owner: \"reviewer\" },\n12\t];\n13\t\n14\texport function summarizeTasks(tasks: Task[]): string {\n15\t\tconst complete = tasks.filter((task) => task.done).length;\n16\t\treturn `${complete}/${tasks.length} complete`;\n17\t}\n18\t\n19\texport function openTasks(tasks: Task[]): Task[] {\n20\t\treturn tasks.filter((task) => !task.done);\n21\t}\n22\t",
+						"tool_use_id": "toolu_6",
+						"type": "tool_result"
+					}
+				],
+				"role": "user"
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"timestamp": "2026-04-17T07:11:18.528Z",
+			"tool_use_result": {
+				"file": {
+					"content": "export type Task = {\n\tid: string;\n\ttitle: string;\n\tdone: boolean;\n\towner?: string;\n};\n\nexport const TASKS: Task[] = [\n\t{ id: \"task-1\", title: \"Audit fixtures\", done: true, owner: \"maintainer\" },\n\t{ id: \"task-2\", title: \"Sanitize streams\", done: false, owner: \"maintainer\" },\n\t{ id: \"task-3\", title: \"Regenerate snapshots\", done: false, owner: \"reviewer\" },\n];\n\nexport function summarizeTasks(tasks: Task[]): string {\n\tconst complete = tasks.filter((task) => task.done).length;\n\treturn `${complete}/${tasks.length} complete`;\n}\n\nexport function openTasks(tasks: Task[]): Task[] {\n\treturn tasks.filter((task) => !task.done);\n}\n",
+					"filePath": "src/tasks.ts",
+					"numLines": 22,
+					"startLine": 1,
+					"totalLines": 22
+				},
+				"type": "text"
+			},
+			"type": "user",
+			"uuid": "uuid_91"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_15",
+		"role": "assistant",
+		"content": "{\"message\":{\"content\":[{\"caller\":{\"type\":\"direct\"},\"id\":\"toolu_7\",\"input\":{\"file_path\":\"docs/notes.md\"},\"name\":\"Read\",\"type\":\"tool_use\"}],\"context_management\":null,\"id\":\"msg_3\",\"model\":\"claude-opus-4-7\",\"role\":\"assistant\",\"stop_details\":null,\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":278,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":278,\"cache_read_input_tokens\":25172,\"inference_geo\":\"not_available\",\"input_tokens\":1,\"output_tokens\":69,\"service_tier\":\"standard\"}},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"type\":\"assistant\",\"uuid\":\"uuid_96\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"caller": {
+							"type": "direct"
+						},
+						"id": "toolu_7",
+						"input": {
+							"file_path": "docs/notes.md"
+						},
+						"name": "Read",
+						"type": "tool_use"
+					}
+				],
+				"context_management": null,
+				"id": "msg_3",
+				"model": "claude-opus-4-7",
+				"role": "assistant",
+				"stop_details": null,
+				"stop_reason": null,
+				"stop_sequence": null,
+				"type": "message",
+				"usage": {
+					"cache_creation": {
+						"ephemeral_1h_input_tokens": 278,
+						"ephemeral_5m_input_tokens": 0
+					},
+					"cache_creation_input_tokens": 278,
+					"cache_read_input_tokens": 25172,
+					"inference_geo": "not_available",
+					"input_tokens": 1,
+					"output_tokens": 69,
+					"service_tier": "standard"
+				}
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"type": "assistant",
+			"uuid": "uuid_96"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_16",
+		"role": "user",
+		"content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_7\",\"type\":\"tool_result\",\"content\":\"1\\t# Notes\\n2\\t\\n3\\t- Keep prompts generic and safe.\\n4\\t- Avoid secrets and personal data.\\n5\\t- Use this repo only for fixture capture.\\n6\\t\"}]},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"uuid\":\"uuid_99\",\"timestamp\":\"2026-04-17T07:11:18.746Z\",\"tool_use_result\":{\"type\":\"text\",\"file\":{\"filePath\":\"docs/notes.md\",\"content\":\"# Notes\\n\\n- Keep prompts generic and safe.\\n- Avoid secrets and personal data.\\n- Use this repo only for fixture capture.\\n\",\"numLines\":6,\"startLine\":1,\"totalLines\":6}}}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"content": "1\t# Notes\n2\t\n3\t- Keep prompts generic and safe.\n4\t- Avoid secrets and personal data.\n5\t- Use this repo only for fixture capture.\n6\t",
+						"tool_use_id": "toolu_7",
+						"type": "tool_result"
+					}
+				],
+				"role": "user"
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"timestamp": "2026-04-17T07:11:18.746Z",
+			"tool_use_result": {
+				"file": {
+					"content": "# Notes\n\n- Keep prompts generic and safe.\n- Avoid secrets and personal data.\n- Use this repo only for fixture capture.\n",
+					"filePath": "docs/notes.md",
+					"numLines": 6,
+					"startLine": 1,
+					"totalLines": 6
+				},
+				"type": "text"
+			},
+			"type": "user",
+			"uuid": "uuid_99"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_17",
+		"role": "assistant",
+		"content": "{\"message\":{\"content\":[{\"caller\":{\"type\":\"direct\"},\"id\":\"toolu_8\",\"input\":{\"file_path\":\"docs/notes.md\",\"new_string\":\"- Use this repo only for fixture capture.\\n- Prefer deterministic fixtures so snapshot diffs stay stable across runs.\",\"old_string\":\"- Use this repo only for fixture capture.\",\"replace_all\":false},\"name\":\"Edit\",\"type\":\"tool_use\"}],\"context_management\":null,\"id\":\"msg_4\",\"model\":\"claude-opus-4-7\",\"role\":\"assistant\",\"stop_details\":null,\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"cache_creation\":{\"ephemeral_1h_input_tokens\":777,\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":777,\"cache_read_input_tokens\":25450,\"inference_geo\":\"not_available\",\"input_tokens\":1,\"output_tokens\":62,\"service_tier\":\"standard\"}},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"type\":\"assistant\",\"uuid\":\"uuid_140\"}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"caller": {
+							"type": "direct"
+						},
+						"id": "toolu_8",
+						"input": {
+							"file_path": "docs/notes.md",
+							"new_string": "- Use this repo only for fixture capture.\n- Prefer deterministic fixtures so snapshot diffs stay stable across runs.",
+							"old_string": "- Use this repo only for fixture capture.",
+							"replace_all": false
+						},
+						"name": "Edit",
+						"type": "tool_use"
+					}
+				],
+				"context_management": null,
+				"id": "msg_4",
+				"model": "claude-opus-4-7",
+				"role": "assistant",
+				"stop_details": null,
+				"stop_reason": null,
+				"stop_sequence": null,
+				"type": "message",
+				"usage": {
+					"cache_creation": {
+						"ephemeral_1h_input_tokens": 777,
+						"ephemeral_5m_input_tokens": 0
+					},
+					"cache_creation_input_tokens": 777,
+					"cache_read_input_tokens": 25450,
+					"inference_geo": "not_available",
+					"input_tokens": 1,
+					"output_tokens": 62,
+					"service_tier": "standard"
+				}
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"type": "assistant",
+			"uuid": "uuid_140"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_18",
+		"role": "user",
+		"content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_8\",\"type\":\"tool_result\",\"content\":\"The file docs/notes.md has been updated successfully.\"}]},\"parent_tool_use_id\":null,\"session_id\":\"session_1\",\"uuid\":\"uuid_144\",\"timestamp\":\"2026-04-17T07:11:22.424Z\",\"tool_use_result\":{\"filePath\":\"docs/notes.md\",\"oldString\":\"- Use this repo only for fixture capture.\",\"newString\":\"- Use this repo only for fixture capture.\\n- Prefer deterministic fixtures so snapshot diffs stay stable across runs.\",\"originalFile\":\"# Notes\\n\\n- Keep prompts generic and safe.\\n- Avoid secrets and personal data.\\n- Use this repo only for fixture capture.\\n\",\"structuredPatch\":[{\"oldStart\":3,\"oldLines\":3,\"newStart\":3,\"newLines\":4,\"lines\":[\" - Keep prompts generic and safe.\",\" - Avoid secrets and personal data.\",\" - Use this repo only for fixture capture.\",\"+- Prefer deterministic fixtures so snapshot diffs stay stable across runs.\"]}],\"userModified\":false,\"replaceAll\":false}}",
+		"parsed_content": {
+			"message": {
+				"content": [
+					{
+						"content": "The file docs/notes.md has been updated successfully.",
+						"tool_use_id": "toolu_8",
+						"type": "tool_result"
+					}
+				],
+				"role": "user"
+			},
+			"parent_tool_use_id": null,
+			"session_id": "session_1",
+			"timestamp": "2026-04-17T07:11:22.424Z",
+			"tool_use_result": {
+				"filePath": "docs/notes.md",
+				"newString": "- Use this repo only for fixture capture.\n- Prefer deterministic fixtures so snapshot diffs stay stable across runs.",
+				"oldString": "- Use this repo only for fixture capture.",
+				"originalFile": "# Notes\n\n- Keep prompts generic and safe.\n- Avoid secrets and personal data.\n- Use this repo only for fixture capture.\n",
+				"replaceAll": false,
+				"structuredPatch": [
+					{
+						"lines": [
+							" - Keep prompts generic and safe.",
+							" - Avoid secrets and personal data.",
+							" - Use this repo only for fixture capture.",
+							"+- Prefer deterministic fixtures so snapshot diffs stay stable across runs."
+						],
+						"newLines": 4,
+						"newStart": 3,
+						"oldLines": 3,
+						"oldStart": 3
+					}
+				],
+				"userModified": false
+			},
+			"type": "user",
+			"uuid": "uuid_144"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	}
+]

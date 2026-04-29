@@ -1,0 +1,82 @@
+---
+source: tests/pipeline_fixtures.rs
+expression: messages
+input_file: tests/fixtures/pipeline/claude_large_collapse/input.json
+---
+- role: assistant
+  id: uuid_3
+  createdAt: "2026-01-01T00:00:00.000Z"
+  content:
+    - type: reasoning
+      id: "uuid_3:blk:0"
+      text: ""
+    - type: tool-call
+      toolCallId: toolu_1
+      toolName: Bash
+      args:
+        command: ls package.json src/tasks.ts docs/notes.md 2>&1
+        description: Check if the target files exist
+      argsText: "{\"command\":\"ls package.json src/tasks.ts docs/notes.md 2>&1\",\"description\":\"Check if the target files exist\"}"
+      result: "EPERM: operation not permitted, mkdir '$CLAUDE_HOME/session-env/uuid_1'"
+      isError: true
+    - type: collapsed-group
+      id: "group:toolu_2"
+      category: mixed
+      tools:
+        - type: tool-call
+          toolCallId: toolu_2
+          toolName: Glob
+          args:
+            pattern: package.json
+          argsText: "{\"pattern\":\"package.json\"}"
+          result: package.json
+        - type: tool-call
+          toolCallId: toolu_3
+          toolName: Glob
+          args:
+            pattern: src/tasks.ts
+          argsText: "{\"pattern\":\"src/tasks.ts\"}"
+          result: src/tasks.ts
+        - type: tool-call
+          toolCallId: toolu_4
+          toolName: Glob
+          args:
+            pattern: docs/notes.md
+          argsText: "{\"pattern\":\"docs/notes.md\"}"
+          result: docs/notes.md
+        - type: tool-call
+          toolCallId: toolu_5
+          toolName: Read
+          args:
+            file_path: package.json
+          argsText: "{\"file_path\":\"package.json\"}"
+          result: "1\t{\n2\t\t\"name\": \"fixture-dummy-repo\",\n3\t\t\"version\": \"0.1.0\",\n4\t\t\"private\": true,\n5\t\t\"type\": \"module\",\n6\t\t\"scripts\": {\n7\t\t\t\"build\": \"tsc -p tsconfig.json\",\n8\t\t\t\"lint\": \"node scripts/check-config.mjs\",\n9\t\t\t\"test\": \"node --test\"\n10\t\t},\n11\t\t\"devDependencies\": {\n12\t\t\t\"typescript\": \"^5.8.3\"\n13\t\t}\n14\t}\n15\t"
+        - type: tool-call
+          toolCallId: toolu_6
+          toolName: Read
+          args:
+            file_path: src/tasks.ts
+          argsText: "{\"file_path\":\"src/tasks.ts\"}"
+          result: "1\texport type Task = {\n2\t\tid: string;\n3\t\ttitle: string;\n4\t\tdone: boolean;\n5\t\towner?: string;\n6\t};\n7\t\n8\texport const TASKS: Task[] = [\n9\t\t{ id: \"task-1\", title: \"Audit fixtures\", done: true, owner: \"maintainer\" },\n10\t\t{ id: \"task-2\", title: \"Sanitize streams\", done: false, owner: \"maintainer\" },\n11\t\t{ id: \"task-3\", title: \"Regenerate snapshots\", done: false, owner: \"reviewer\" },\n12\t];\n13\t\n14\texport function summarizeTasks(tasks: Task[]): string {\n15\t\tconst complete = tasks.filter((task) => task.done).length;\n16\t\treturn `${complete}/${tasks.length} complete`;\n17\t}\n18\t\n19\texport function openTasks(tasks: Task[]): Task[] {\n20\t\treturn tasks.filter((task) => !task.done);\n21\t}\n22\t"
+        - type: tool-call
+          toolCallId: toolu_7
+          toolName: Read
+          args:
+            file_path: docs/notes.md
+          argsText: "{\"file_path\":\"docs/notes.md\"}"
+          result: "1\t# Notes\n2\t\n3\t- Keep prompts generic and safe.\n4\t- Avoid secrets and personal data.\n5\t- Use this repo only for fixture capture.\n6\t"
+      active: false
+      summary: "Searched 3 patterns, read 3 files"
+    - type: tool-call
+      toolCallId: toolu_8
+      toolName: Edit
+      args:
+        file_path: docs/notes.md
+        new_string: "- Use this repo only for fixture capture.\n- Prefer deterministic fixtures so snapshot diffs stay stable across runs."
+        old_string: "- Use this repo only for fixture capture."
+        replace_all: false
+      argsText: "{\"file_path\":\"docs/notes.md\",\"new_string\":\"- Use this repo only for fixture capture.\\n- Prefer deterministic fixtures so snapshot diffs stay stable across runs.\",\"old_string\":\"- Use this repo only for fixture capture.\",\"replace_all\":false}"
+      result: The file docs/notes.md has been updated successfully.
+  status:
+    type: complete
+    reason: stop

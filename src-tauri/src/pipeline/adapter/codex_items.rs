@@ -1,0 +1,398 @@
+//! Historical-reload rendering for Codex `item.completed` rows.
+//!
+//! When the user reopens a session, the DB hands the loader rows whose
+//! `content` column holds the raw `item.completed` JSON the accumulator
+//! persisted at stream time. We re-parse those rows here so the rendered
+//! output matches what the user saw live — without going back through
+//! the accumulator (it would push to `turns` again, which the historical
+//! path must not do).
+//!
+//! Each `item.type` mirrors the corresponding accumulator handler, just
+//! producing `ThreadMessageLike` directly instead of synthesizing a
+//! Claude-shaped `assistant` event.
+
+use serde_json::Value;
+
+use super::blocks::parse_codex_todolist_items;
+use crate::pipeline::types::{
+    ExtendedMessagePart, ImageSource, IntermediateMessage, MessagePart, MessageRole, MessageStatus,
+    NoticeSeverity, PlanAllowedPrompt, ThreadMessageLike,
+};
+
+/// Render a single `item.completed` IntermediateMessage. Pushes 0 or 1
+/// rendered messages onto `result` depending on the item type.
+pub(super) fn render_item_completed(
+    msg: &IntermediateMessage,
+    parsed: Option<&Value>,
+    result: &mut Vec<ThreadMessageLike>,
+) {
+    let item = match parsed.and_then(|p| p.get("item")) {
+        Some(i) => i,
+        None => return,
+    };
+    let item_type = item.get("type").and_then(Value::as_str);
+
+    match item_type {
+        Some("agent_message") => {
+            if let Some(text) = item.get("text").and_then(Value::as_str) {
+                result.push(ThreadMessageLike {
+                    role: MessageRole::Assistant,
+                    id: Some(msg.id.clone()),
+                    created_at: Some(msg.created_at.clone()),
+                    content: vec![ExtendedMessagePart::Basic(MessagePart::Text {
+                        id: format!("{}:blk:0", msg.id),
+                        text: text.to_string(),
+                    })],
+                    status: Some(MessageStatus {
+                        status_type: "complete".to_string(),
+                        reason: Some("stop".to_string()),
+                    }),
+                    streaming: None,
+                });
+            }
+        }
+        Some("command_execution") => render_command_execution(msg, item, result),
+        Some("todo_list") => render_todo_list(msg, item, result),
+        Some("reasoning") => render_reasoning(msg, item, result),
+        Some("file_change") => render_file_change(msg, item, result),
+        Some("web_search") => render_web_search(msg, item, result),
+        Some("mcp_tool_call") => render_mcp_tool_call(msg, item, result),
+        Some("plan") => render_plan(msg, item, result),
+        Some("context_compaction") => render_context_compaction(msg, item, result),
+        Some("image_generation") => render_image_generation(msg, item, result),
+        _ => {}
+    }
+}
+
+fn render_command_execution(
+    msg: &IntermediateMessage,
+    item: &Value,
+    result: &mut Vec<ThreadMessageLike>,
+) {
+    let command = item.get("command").and_then(Value::as_str).unwrap_or("");
+    // Prefer `aggregated_output`; fall back to `output` for older data.
+    let output = item
+        .get("aggregated_output")
+        .or_else(|| item.get("output"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let exit_code = item.get("exit_code").and_then(Value::as_i64).unwrap_or(0);
+    let result_text = if exit_code == 0 {
+        output.to_string()
+    } else {
+        format!("Exit code: {exit_code}\n{output}")
+    };
+    let args = serde_json::json!({"command": command});
+    let args_text = serde_json::to_string(&args).unwrap_or_default();
+    // Codex has no `is_error`; derive from exit_code. The frontend parses
+    // `Exit code N\n...` out of `result` directly.
+    let failed = exit_code != 0;
+
+    result.push(ThreadMessageLike {
+        role: MessageRole::Assistant,
+        id: Some(msg.id.clone()),
+        created_at: Some(msg.created_at.clone()),
+        content: vec![ExtendedMessagePart::Basic(MessagePart::ToolCall {
+            tool_call_id: format!("codex-cmd-{}", msg.id),
+            tool_name: "Bash".to_string(),
+            args,
+            args_text,
+            result: Some(Value::String(result_text)),
+            is_error: if failed { Some(true) } else { None },
+            streaming_status: None,
+            children: Vec::new(),
+        })],
+        status: Some(MessageStatus {
+            status_type: "complete".to_string(),
+            reason: Some("stop".to_string()),
+        }),
+        streaming: None,
+    });
+}
+
+fn render_context_compaction(
+    msg: &IntermediateMessage,
+    item: &Value,
+    result: &mut Vec<ThreadMessageLike>,
+) {
+    let body = item
+        .get("summary")
+        .or_else(|| item.get("text"))
+        .or_else(|| item.get("content"))
+        .and_then(Value::as_str)
+        .filter(|s| !s.trim().is_empty())
+        .map(str::to_string);
+    result.push(ThreadMessageLike {
+        role: MessageRole::System,
+        id: Some(msg.id.clone()),
+        created_at: Some(msg.created_at.clone()),
+        content: vec![ExtendedMessagePart::Basic(MessagePart::SystemNotice {
+            id: format!("{}:notice", msg.id),
+            severity: NoticeSeverity::Info,
+            label: "Context compacted".to_string(),
+            body,
+        })],
+        status: None,
+        streaming: None,
+    });
+}
+
+fn render_todo_list(msg: &IntermediateMessage, item: &Value, result: &mut Vec<ThreadMessageLike>) {
+    if let Some(items) = parse_codex_todolist_items(item) {
+        result.push(ThreadMessageLike {
+            role: MessageRole::Assistant,
+            id: Some(msg.id.clone()),
+            created_at: Some(msg.created_at.clone()),
+            content: vec![ExtendedMessagePart::Basic(MessagePart::TodoList {
+                id: format!("{}:blk:0", msg.id),
+                items,
+            })],
+            status: Some(MessageStatus {
+                status_type: "complete".to_string(),
+                reason: Some("stop".to_string()),
+            }),
+            streaming: None,
+        });
+    }
+}
+
+fn render_reasoning(msg: &IntermediateMessage, item: &Value, result: &mut Vec<ThreadMessageLike>) {
+    if let Some(text) = item.get("text").and_then(Value::as_str) {
+        if !text.is_empty() {
+            result.push(ThreadMessageLike {
+                role: MessageRole::Assistant,
+                id: Some(msg.id.clone()),
+                created_at: Some(msg.created_at.clone()),
+                content: vec![ExtendedMessagePart::Basic(MessagePart::Reasoning {
+                    id: format!("{}:blk:0", msg.id),
+                    text: text.to_string(),
+                    streaming: None,
+                    duration_ms: None,
+                })],
+                status: Some(MessageStatus {
+                    status_type: "complete".to_string(),
+                    reason: Some("stop".to_string()),
+                }),
+                streaming: None,
+            });
+        }
+    }
+}
+
+fn render_file_change(
+    msg: &IntermediateMessage,
+    item: &Value,
+    result: &mut Vec<ThreadMessageLike>,
+) {
+    let changes = item
+        .get("changes")
+        .cloned()
+        .unwrap_or_else(|| Value::Array(Vec::new()));
+    let status = item
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("completed");
+    let result_text = match status {
+        "completed" => "Patch applied".to_string(),
+        "failed" => "Patch failed".to_string(),
+        other => format!("Patch {other}"),
+    };
+    let failed = status == "failed";
+    let args = serde_json::json!({"changes": changes});
+    let args_text = serde_json::to_string(&args).unwrap_or_default();
+    result.push(ThreadMessageLike {
+        role: MessageRole::Assistant,
+        id: Some(msg.id.clone()),
+        created_at: Some(msg.created_at.clone()),
+        content: vec![ExtendedMessagePart::Basic(MessagePart::ToolCall {
+            tool_call_id: format!("codex-patch-{}", msg.id),
+            tool_name: "apply_patch".to_string(),
+            args,
+            args_text,
+            result: Some(Value::String(result_text)),
+            is_error: if failed { Some(true) } else { None },
+            streaming_status: None,
+            children: Vec::new(),
+        })],
+        status: Some(MessageStatus {
+            status_type: "complete".to_string(),
+            reason: Some("stop".to_string()),
+        }),
+        streaming: None,
+    });
+}
+
+fn render_web_search(msg: &IntermediateMessage, item: &Value, result: &mut Vec<ThreadMessageLike>) {
+    let query = item.get("query").and_then(Value::as_str).unwrap_or("");
+    let mut args = serde_json::json!({"query": query});
+    if let Some(action) = item.get("action") {
+        args["action"] = action.clone();
+    }
+    let args_text = serde_json::to_string(&args).unwrap_or_default();
+    let tool_result = {
+        let mut lines = Vec::new();
+        if !query.is_empty() {
+            lines.push(query.to_string());
+        }
+        if let Some(a) = item.get("action") {
+            if let Some(url) = a.get("url").and_then(Value::as_str) {
+                lines.push(url.to_string());
+            }
+            if let Some(pattern) = a.get("pattern").and_then(Value::as_str) {
+                lines.push(format!("Pattern: {pattern}"));
+            }
+        }
+        let summary = lines.join("\n");
+        if summary.is_empty() {
+            None
+        } else {
+            Some(Value::String(summary))
+        }
+    };
+    result.push(ThreadMessageLike {
+        role: MessageRole::Assistant,
+        id: Some(msg.id.clone()),
+        created_at: Some(msg.created_at.clone()),
+        content: vec![ExtendedMessagePart::Basic(MessagePart::ToolCall {
+            tool_call_id: format!("codex-search-{}", msg.id),
+            tool_name: "WebSearch".to_string(),
+            args,
+            args_text,
+            result: tool_result,
+            is_error: None,
+            streaming_status: None,
+            children: Vec::new(),
+        })],
+        status: Some(MessageStatus {
+            status_type: "complete".to_string(),
+            reason: Some("stop".to_string()),
+        }),
+        streaming: None,
+    });
+}
+
+fn render_mcp_tool_call(
+    msg: &IntermediateMessage,
+    item: &Value,
+    result: &mut Vec<ThreadMessageLike>,
+) {
+    let server = item.get("server").and_then(Value::as_str).unwrap_or("");
+    let tool = item.get("tool").and_then(Value::as_str).unwrap_or("");
+    let arguments = item.get("arguments").cloned().unwrap_or(Value::Null);
+    let status = item
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("completed");
+    let failed = status == "failed";
+    let result_text = if failed {
+        let m = item
+            .get("error")
+            .and_then(|e| e.get("message"))
+            .and_then(Value::as_str)
+            .unwrap_or("MCP tool failed");
+        format!("Error: {m}")
+    } else {
+        item.get("result")
+            .and_then(|r| serde_json::to_string(r).ok())
+            .unwrap_or_else(|| "OK".to_string())
+    };
+    let args_text = serde_json::to_string(&arguments).unwrap_or_default();
+    result.push(ThreadMessageLike {
+        role: MessageRole::Assistant,
+        id: Some(msg.id.clone()),
+        created_at: Some(msg.created_at.clone()),
+        content: vec![ExtendedMessagePart::Basic(MessagePart::ToolCall {
+            tool_call_id: format!("codex-mcp-{}", msg.id),
+            tool_name: format!("mcp__{server}__{tool}"),
+            args: arguments,
+            args_text,
+            result: Some(Value::String(result_text)),
+            is_error: if failed { Some(true) } else { None },
+            streaming_status: None,
+            children: Vec::new(),
+        })],
+        status: Some(MessageStatus {
+            status_type: "complete".to_string(),
+            reason: Some("stop".to_string()),
+        }),
+        streaming: None,
+    });
+}
+
+fn render_plan(msg: &IntermediateMessage, item: &Value, result: &mut Vec<ThreadMessageLike>) {
+    let text = item.get("text").and_then(Value::as_str).unwrap_or("");
+    if text.is_empty() {
+        return;
+    }
+    result.push(ThreadMessageLike {
+        role: MessageRole::Assistant,
+        id: Some(msg.id.clone()),
+        created_at: Some(msg.created_at.clone()),
+        content: vec![ExtendedMessagePart::Basic(MessagePart::PlanReview {
+            tool_use_id: format!("codex-plan-{}", msg.id),
+            tool_name: "CodexPlan".to_string(),
+            plan: Some(text.to_string()),
+            plan_file_path: None,
+            allowed_prompts: Vec::<PlanAllowedPrompt>::new(),
+        })],
+        status: Some(MessageStatus {
+            status_type: "complete".to_string(),
+            reason: Some("stop".to_string()),
+        }),
+        streaming: None,
+    });
+}
+
+fn render_image_generation(
+    msg: &IntermediateMessage,
+    item: &Value,
+    result: &mut Vec<ThreadMessageLike>,
+) {
+    let source = if let Some(path) = item
+        .get("saved_path")
+        .or_else(|| item.get("savedPath"))
+        .and_then(Value::as_str)
+        .filter(|s| !s.trim().is_empty())
+    {
+        ImageSource::File {
+            path: path.to_string(),
+        }
+    } else if let Some(raw_result) = item.get("result").and_then(Value::as_str) {
+        let result_value = raw_result.trim();
+        if result_value.is_empty() {
+            return;
+        }
+
+        if result_value.starts_with("data:image/") || result_value.starts_with("http") {
+            ImageSource::Url {
+                url: result_value.to_string(),
+            }
+        } else {
+            ImageSource::Base64 {
+                data: result_value.to_string(),
+            }
+        }
+    } else {
+        return;
+    };
+    let media_type = match &source {
+        ImageSource::Base64 { .. } => Some("image/png".to_string()),
+        ImageSource::Url { .. } | ImageSource::File { .. } => None,
+    };
+
+    result.push(ThreadMessageLike {
+        role: MessageRole::Assistant,
+        id: Some(msg.id.clone()),
+        created_at: Some(msg.created_at.clone()),
+        content: vec![ExtendedMessagePart::Basic(MessagePart::Image {
+            id: format!("{}:blk:0", msg.id),
+            source,
+            media_type,
+        })],
+        status: Some(MessageStatus {
+            status_type: "complete".to_string(),
+            reason: Some("stop".to_string()),
+        }),
+        streaming: None,
+    });
+}

@@ -1,0 +1,140 @@
+{"type":"thread/started","thread":{"id":"uuid_1","forkedFromId":null,"preview":"","ephemeral":false,"modelProvider":"openai","createdAt":1776408950,"updatedAt":1776408950,"status":{"type":"idle"},"path":"$CODEX_HOME/sessions/2026/04/17/rollout-2026-04-17T14-55-48-uuid_1.jsonl","cwd":"$DUMMY_REPO","cliVersion":"0.121.0","source":"vscode","agentNickname":null,"agentRole":null,"gitInfo":null,"name":null,"turns":[]},"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"shadcn","status":"starting","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"browsermcp","status":"starting","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"codex_apps","status":"starting","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"context7","status":"starting","error":null,"session_id":"session_1"}
+{"type":"thread/status/changed","threadId":"thread_1","status":{"type":"active","activeFlags":[]},"session_id":"session_1"}
+{"type":"turn/started","threadId":"thread_1","turn":{"id":"uuid_2","items":[],"status":"inProgress","error":null,"startedAt":1776408950,"completedAt":null,"durationMs":null},"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"codex_apps","status":"ready","error":null,"session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"browsermcp","status":"failed","error":"MCP client for `browsermcp` failed to start: MCP startup failed: handshaking with MCP server failed: connection closed: initialize response","session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"shadcn","status":"failed","error":"MCP client for `shadcn` failed to start: MCP startup failed: handshaking with MCP server failed: connection closed: initialize response","session_id":"session_1"}
+{"type":"mcpServer/startupStatus/updated","name":"context7","status":"ready","error":null,"session_id":"session_1"}
+{"type":"item/started","item":{"type":"userMessage","id":"uuid_3","content":[{"type":"text","text":"Run a safe shell command that prints package.json and then summarize the scripts it contains.","text_elements":[]}]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"userMessage","id":"uuid_3","content":[{"type":"text","text":"Run a safe shell command that prints package.json and then summarize the scripts it contains.","text_elements":[]}]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"account/rateLimits/updated","rateLimits":{"limitId":"codex","limitName":null,"primary":{"usedPercent":21,"windowDurationMins":300,"resetsAt":1776422527},"secondary":{"usedPercent":30,"windowDurationMins":10080,"resetsAt":1776914276},"credits":null,"planType":"prolite"},"session_id":"session_1"}
+{"type":"item/started","item":{"type":"reasoning","id":"rs_1","summary":[],"content":[]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"reasoning","id":"rs_1","summary":[],"content":[]},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/started","item":{"type":"agentMessage","id":"msg_1","text":"","phase":"commentary","memoryCitation":null},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":"I","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":"’m","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" reading","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" `","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":"package","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":".json","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":"`","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" directly","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" so","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" I","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" can","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" summarize","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" the","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" defined","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" npm","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" scripts","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" without","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" making","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" any","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":" changes","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_1","delta":".","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"agentMessage","id":"msg_1","text":"I’m reading `package.json` directly so I can summarize the defined npm scripts without making any changes.","phase":"commentary","memoryCitation":null},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"thread/tokenUsage/updated","threadId":"thread_1","turnId":"turn_1","tokenUsage":{"total":{"totalTokens":17510,"inputTokens":17324,"cachedInputTokens":3456,"outputTokens":186,"reasoningOutputTokens":94},"last":{"totalTokens":17510,"inputTokens":17324,"cachedInputTokens":3456,"outputTokens":186,"reasoningOutputTokens":94},"modelContextWindow":950000},"session_id":"session_1"}
+{"type":"account/rateLimits/updated","rateLimits":{"limitId":"codex","limitName":null,"primary":{"usedPercent":21,"windowDurationMins":300,"resetsAt":1776422527},"secondary":{"usedPercent":30,"windowDurationMins":10080,"resetsAt":1776914276},"credits":null,"planType":"prolite"},"session_id":"session_1"}
+{"type":"item/started","item":{"type":"commandExecution","id":"call_1","command":"/bin/zsh -lc 'cat package.json'","cwd":"$DUMMY_REPO","processId":"53318","source":"unifiedExecStartup","status":"inProgress","commandActions":[{"type":"read","command":"cat package.json","name":"package.json","path":"$DUMMY_REPO/package.json"}],"aggregatedOutput":null,"exitCode":null,"durationMs":null},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"commandExecution","id":"call_1","command":"/bin/zsh -lc 'cat package.json'","cwd":"$DUMMY_REPO","processId":"53318","source":"unifiedExecStartup","status":"completed","commandActions":[{"type":"read","command":"cat package.json","name":"package.json","path":"$DUMMY_REPO/package.json"}],"aggregatedOutput":"{\n\t\"name\": \"fixture-dummy-repo\",\n\t\"version\": \"0.1.0\",\n\t\"private\": true,\n\t\"type\": \"module\",\n\t\"scripts\": {\n\t\t\"build\": \"tsc -p tsconfig.json\",\n\t\t\"lint\": \"node scripts/check-config.mjs\",\n\t\t\"test\": \"node --test\"\n\t},\n\t\"devDependencies\": {\n\t\t\"typescript\": \"^5.8.3\"\n\t}\n}\n","exitCode":0,"durationMs":0},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/started","item":{"type":"agentMessage","id":"msg_2","text":"","phase":"final_answer","memoryCitation":null},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"`","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"package","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":".json","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"`","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" contains","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" three","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" scripts","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":":\n\n","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"-","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" `","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"build","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"`:","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" runs","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" Type","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"Script","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" compilation","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" with","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" `","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"ts","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"c","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" -","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"p","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" ts","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"config","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":".json","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"`.\n","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"-","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" `","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"lint","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"`:","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" runs","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" a","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" custom","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" config","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" check","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" via","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" `","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"node","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" scripts","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"/check","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"-config","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":".m","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"js","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"`.\n","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"-","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" `","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"test","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"`:","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" runs","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" the","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" Node","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" test","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" runner","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" with","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" `","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"node","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" --","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"test","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"`.\n\n","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"The","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" file","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" also","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" marks","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" the","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" package","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" as","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" private","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":",","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" uses","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" E","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"SM","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" (`","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"\"","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"type","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"\":","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" \"","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"module","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"\"`","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"),","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" and","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" only","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" lists","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" `","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"typescript","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":"`","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" as","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" a","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" dev","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":" dependency","session_id":"session_1"}
+{"type":"item/agentMessage/delta","threadId":"thread_1","turnId":"turn_1","itemId":"msg_2","delta":".","session_id":"session_1"}
+{"type":"item/completed","item":{"type":"agentMessage","id":"msg_2","text":"`package.json` contains three scripts:\n\n- `build`: runs TypeScript compilation with `tsc -p tsconfig.json`.\n- `lint`: runs a custom config check via `node scripts/check-config.mjs`.\n- `test`: runs the Node test runner with `node --test`.\n\nThe file also marks the package as private, uses ESM (`\"type\": \"module\"`), and only lists `typescript` as a dev dependency.","phase":"final_answer","memoryCitation":null},"threadId":"thread_1","turnId":"turn_1","session_id":"session_1"}
+{"type":"thread/tokenUsage/updated","threadId":"thread_1","turnId":"turn_1","tokenUsage":{"total":{"totalTokens":35259,"inputTokens":34979,"cachedInputTokens":20864,"outputTokens":280,"reasoningOutputTokens":94},"last":{"totalTokens":17749,"inputTokens":17655,"cachedInputTokens":17408,"outputTokens":94,"reasoningOutputTokens":0},"modelContextWindow":950000},"session_id":"session_1"}
+{"type":"account/rateLimits/updated","rateLimits":{"limitId":"codex","limitName":null,"primary":{"usedPercent":21,"windowDurationMins":300,"resetsAt":1776422527},"secondary":{"usedPercent":30,"windowDurationMins":10080,"resetsAt":1776914276},"credits":null,"planType":"prolite"},"session_id":"session_1"}
+{"type":"thread/status/changed","threadId":"thread_1","status":{"type":"idle"},"session_id":"session_1"}
+{"type":"turn/completed","threadId":"thread_1","turn":{"id":"uuid_2","items":[],"status":"completed","error":null,"startedAt":1776408950,"completedAt":1776408965,"durationMs":15364},"session_id":"session_1"}
+{"type":"end"}

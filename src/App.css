@@ -1,0 +1,673 @@
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "react-loading-skeleton/dist/skeleton.css";
+@import "streamdown/styles.css";
+@import "./styles/color-theme.css";
+
+@source "../node_modules/streamdown/dist/*.js";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+	--font-sans:
+		"Geist Variable", "SF Pro Display", -apple-system, BlinkMacSystemFont,
+		"Segoe UI", sans-serif;
+	--font-mono:
+		"Geist Mono Variable", ui-monospace, "SF Mono", SFMono-Regular, Menlo,
+		Monaco, Consolas, monospace;
+}
+
+:root {
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-text-size-adjust: 100%;
+}
+
+html,
+body,
+#root {
+	margin: 0;
+	height: 100%;
+	min-height: 100%;
+	overflow: hidden;
+}
+
+body {
+	min-height: 100vh;
+	background-color: var(--background);
+}
+
+.conversation-scroll-viewport {
+	overscroll-behavior: none;
+	overflow-anchor: none;
+}
+
+/* Sonner toast: stack content and action buttons vertically */
+[data-sonner-toast][data-styled="true"]:has([data-button]) {
+	flex-wrap: wrap;
+}
+[data-sonner-toast][data-styled="true"]:has([data-button]) [data-content] {
+	flex: 1 0 100%;
+}
+[data-sonner-toast][data-styled="true"] [data-title] {
+	padding-right: 16px;
+}
+[data-sonner-toast][data-styled="true"] [data-button] {
+	margin-top: 4px;
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+	margin-inline-start: 0 !important;
+	margin-inline-end: 0 !important;
+}
+[data-sonner-toast][data-styled="true"]:has([data-button])
+	[data-content]
+	+ [data-button] {
+	margin-left: auto !important;
+	margin-inline-start: auto !important;
+}
+[data-sonner-toast][data-styled="true"] [data-button] + [data-button] {
+	margin-left: 8px !important;
+	margin-inline-start: 8px !important;
+}
+
+/*
+ * Conversation scrollbar entry animation — fires once per app load.
+ *
+ * The chat <ScrollArea> uses `type="always"`, so the scrollbar is in the
+ * tree from the very first frame. We hold it invisible briefly then fade it
+ * in gently so the user doesn't see the thumb placed at a bogus size while
+ * initial measured heights converge.
+ *
+ * Note: Phase 2 iter 8 (`09df3fd`) removed the `key={sessionId}` on
+ * <ScrollArea>, so this animation no longer re-fires per session switch.
+ */
+.conversation-scroll-area [data-slot="scroll-area-scrollbar"] {
+	animation: conversation-scrollbar-fade-in 300ms ease-out 400ms both;
+}
+
+@keyframes conversation-scrollbar-fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+.conversation-thread-enter {
+	animation: conversation-fade-in 70ms ease-out;
+}
+
+.shortcut-recording-pulse::after {
+	position: absolute;
+	inset: -2px;
+	border: 1px solid color-mix(in srgb, var(--primary) 72%, transparent);
+	border-radius: inherit;
+	pointer-events: none;
+	content: "";
+	animation: shortcut-recording-ring 1100ms ease-out infinite;
+}
+
+@keyframes shortcut-recording-ring {
+	0% {
+		opacity: 0.58;
+		transform: translate3d(0, 0, 0) scale(1);
+	}
+
+	100% {
+		opacity: 0;
+		transform: translate3d(0, 0, 0) scale(1.2);
+	}
+}
+
+.shortcut-conflict-shake {
+	animation: shortcut-conflict-shake 260ms ease-in-out;
+}
+
+@keyframes shortcut-conflict-shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+
+	25% {
+		transform: translateX(-2px);
+	}
+
+	50% {
+		transform: translateX(2px);
+	}
+
+	75% {
+		transform: translateX(-1px);
+	}
+}
+
+@keyframes conversation-fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+.conversation-scroll-button {
+	position: absolute;
+	left: 50%;
+	bottom: 1.25rem;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	transform: translateX(-50%);
+	border: none;
+	background: var(--popover);
+	color: var(--muted-foreground);
+	border-radius: 9999px;
+	padding: 0;
+	cursor: pointer;
+	opacity: 1;
+	transition:
+		opacity 200ms ease,
+		transform 200ms ease,
+		color 150ms ease,
+		background-color 150ms ease;
+}
+
+.conversation-scroll-button-hidden {
+	opacity: 0;
+	transform: translateX(-50%) translateY(6px);
+	pointer-events: none;
+}
+
+.conversation-scroll-button:hover {
+	background: var(--accent);
+	color: var(--accent-foreground);
+}
+
+.helmor-shimmer-text {
+	color: transparent;
+	background-image: linear-gradient(
+		90deg,
+		color-mix(in oklch, var(--muted-foreground) 60%, transparent) 0%,
+		color-mix(in oklch, var(--muted-foreground) 60%, transparent) 35%,
+		color-mix(in oklch, var(--foreground) 85%, transparent) 50%,
+		color-mix(in oklch, var(--muted-foreground) 60%, transparent) 65%,
+		color-mix(in oklch, var(--muted-foreground) 60%, transparent) 100%
+	);
+	background-size: 300% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	animation: helmor-shimmer-sweep 2.4s ease-in-out infinite;
+}
+
+.assistant-markdown-scale {
+	--assistant-paragraph-line-height: 1.82;
+	line-height: 1.5;
+}
+
+.assistant-markdown-scale p,
+.assistant-markdown-scale [data-streamdown="paragraph"],
+.assistant-markdown-scale [data-streamdown="list-item"] {
+	line-height: var(--assistant-paragraph-line-height);
+}
+
+.assistant-markdown-scale
+	[data-streamdown="ordered-list"]
+	> [data-streamdown="list-item"]::marker {
+	color: var(--muted-foreground);
+}
+
+.assistant-markdown-scale
+	:is([data-streamdown="ordered-list"], [data-streamdown="unordered-list"]) {
+	padding-inline-start: 0.25rem;
+}
+
+.assistant-markdown-scale
+	:is([data-streamdown="ordered-list"], [data-streamdown="unordered-list"])
+	> [data-streamdown="list-item"] {
+	padding-top: 0.125rem;
+	padding-bottom: 0.125rem;
+}
+
+.conversation-streamdown
+	> :is(p, [data-streamdown="paragraph"])
+	+ :is([data-streamdown="ordered-list"], [data-streamdown="unordered-list"]) {
+	margin-top: 0.75rem;
+}
+
+.assistant-markdown-scale [data-streamdown="heading-1"],
+.assistant-markdown-scale [data-streamdown="heading-2"],
+.assistant-markdown-scale [data-streamdown="heading-3"],
+.assistant-markdown-scale [data-streamdown="heading-4"],
+.assistant-markdown-scale [data-streamdown="heading-5"],
+.assistant-markdown-scale [data-streamdown="heading-6"] {
+	margin: 1.4em 0 0.4em;
+	color: inherit;
+}
+
+.assistant-markdown-scale [data-streamdown="heading-1"]:first-child,
+.assistant-markdown-scale [data-streamdown="heading-2"]:first-child,
+.assistant-markdown-scale [data-streamdown="heading-3"]:first-child,
+.assistant-markdown-scale [data-streamdown="heading-4"]:first-child,
+.assistant-markdown-scale [data-streamdown="heading-5"]:first-child,
+.assistant-markdown-scale [data-streamdown="heading-6"]:first-child {
+	margin-top: 0;
+}
+
+.assistant-markdown-scale [data-streamdown="heading-1"] {
+	font-size: 1.35em;
+	line-height: 1.3;
+}
+
+.assistant-markdown-scale [data-streamdown="heading-2"] {
+	font-size: 1.2em;
+	line-height: 1.32;
+}
+
+.assistant-markdown-scale [data-streamdown="heading-3"] {
+	font-size: 1.1em;
+	line-height: 1.36;
+}
+
+.assistant-markdown-scale [data-streamdown="heading-4"],
+.assistant-markdown-scale [data-streamdown="heading-5"],
+.assistant-markdown-scale [data-streamdown="heading-6"] {
+	font-size: 1em;
+	line-height: 1.4;
+}
+
+.assistant-markdown-scale [data-streamdown="list"] {
+	line-height: 1.5;
+}
+
+.assistant-markdown-scale [data-streamdown="blockquote"] {
+	line-height: 1.45;
+	color: var(--muted-foreground);
+}
+
+.assistant-markdown-scale [data-streamdown="inline-code"] {
+	font-size: 0.88em;
+	background: transparent;
+	border: 1px solid
+		color-mix(in oklch, var(--muted) 87%, var(--muted-foreground) 13%);
+	margin: 0 2px;
+}
+
+.assistant-markdown-scale [data-streamdown="code-block"] {
+	font-size: 0.86em;
+}
+
+@keyframes helmor-shimmer-sweep {
+	0% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+/*
+ * Global scrollbar styling lives in @layer utilities so that Tailwind v4
+ * `@utility` classes such as `no-scrollbar` (from shadcn) can win via
+ * specificity. Without the layer, these rules are unlayered and beat every
+ * layered utility per CSS cascade spec (unlayered > layered), which silently
+ * breaks `no-scrollbar` in production builds while still working in dev.
+ */
+@layer utilities {
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in oklch, var(--foreground) 18%, transparent)
+			transparent;
+	}
+
+	*::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+		background: transparent;
+		background-color: transparent;
+	}
+
+	*::-webkit-scrollbar-track,
+	*::-webkit-scrollbar-track-piece {
+		background: transparent !important;
+		background-color: transparent !important;
+		border: 0;
+		box-shadow: none;
+	}
+
+	*::-webkit-scrollbar-thumb {
+		border: 2px solid transparent;
+		border-radius: 999px;
+		background: color-mix(in oklch, var(--foreground) 18%, transparent);
+		background-clip: padding-box;
+	}
+
+	*::-webkit-scrollbar-thumb:hover {
+		background: color-mix(in oklch, var(--foreground) 30%, transparent);
+		background-clip: padding-box;
+	}
+
+	*::-webkit-scrollbar-corner,
+	*::-webkit-scrollbar-button {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+}
+
+/* xterm: custom scrollbar shape to match app style */
+.xterm .xterm-scrollable-element > .scrollbar {
+	width: 8px !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar > .slider {
+	border-radius: 999px !important;
+	left: 2px !important;
+	width: calc(100% - 4px) !important;
+}
+
+.xterm .xterm-scrollable-element > .shadow.top {
+	display: none !important;
+}
+
+.scrollbar-none {
+	scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+	display: none;
+}
+
+.scrollbar-stable {
+	scrollbar-gutter: stable;
+}
+
+[data-slot="scroll-area-viewport"] > div {
+	display: block !important;
+	min-width: 0 !important;
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+@theme inline {
+	--font-heading: var(--font-sans);
+	--font-sans: "Geist Variable", sans-serif;
+	--font-mono:
+		"Geist Mono Variable", ui-monospace, "SF Mono", SFMono-Regular, Menlo,
+		Monaco, Consolas, monospace;
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-chart-5: var(--chart-5);
+	--color-chart-4: var(--chart-4);
+	--color-chart-3: var(--chart-3);
+	--color-chart-2: var(--chart-2);
+	--color-chart-1: var(--chart-1);
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+	--color-plan: var(--plan);
+	--radius-sm: calc(var(--radius) * 0.6);
+	--radius-md: calc(var(--radius) * 0.8);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) * 1.4);
+	--radius-2xl: calc(var(--radius) * 1.8);
+	--radius-3xl: calc(var(--radius) * 2.2);
+	--radius-4xl: calc(var(--radius) * 2.6);
+	--animate-shine: shine var(--duration) infinite linear;
+	--animate-shiny-text: shiny-text 8s infinite;
+	@keyframes shine {
+		0% {
+			background-position: 0% 0%;
+		}
+		50% {
+			background-position: 100% 100%;
+		}
+		to {
+			background-position: 0% 0%;
+		}
+	}
+	@keyframes shiny-text {
+		0%,
+		90%,
+		100% {
+			background-position: calc(-100% - var(--shiny-width)) 0;
+		}
+		30%,
+		60% {
+			background-position: calc(100% + var(--shiny-width)) 0;
+		}
+	}
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	html {
+		@apply font-sans;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+}
+
+/* Effort max/xhigh animated gradient text */
+.effort-max-text {
+	background: linear-gradient(
+		135deg,
+		oklch(0.7 0.22 280),
+		oklch(0.65 0.24 330),
+		oklch(0.7 0.22 20),
+		oklch(0.65 0.24 280)
+	);
+	background-size: 300% 300%;
+	animation: effort-shimmer 4s ease-in-out infinite;
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+@keyframes effort-shimmer {
+	0%,
+	100% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+}
+
+@keyframes shiny-text-continuous {
+	0% {
+		background-position: calc(-100% - var(--shiny-width)) 0;
+	}
+	50% {
+		background-position: calc(100% + var(--shiny-width)) 0;
+	}
+	100% {
+		background-position: calc(-100% - var(--shiny-width)) 0;
+	}
+}
+
+.conversation-body-text {
+	color: var(--conversation-body-foreground);
+}
+
+.workspace-row-selected {
+	background: var(--workspace-sidebar-selected-bg);
+}
+
+/* Streamdown theme overrides — minimal, no !important */
+.conversation-streamdown {
+	color: var(--conversation-body-foreground);
+}
+
+.conversation-streamdown [data-sd-animate] {
+	animation: none;
+}
+
+.conversation-streamdown :where(p, li, ul, ol, blockquote, table, strong, em) {
+	color: inherit;
+}
+
+.conversation-streamdown :where(a) {
+	color: var(--chart-3);
+}
+
+.conversation-streamdown :where(blockquote) {
+	color: var(--muted-foreground);
+	border-left: 0.25rem solid color-mix(in oklch, var(--border) 90%, transparent);
+}
+
+/*
+ * Inline code font-size.
+ *
+ * Streamdown hard-codes `text-sm` (14px absolute) on inline `<code>` elements,
+ * which ignores the user's settings.fontSize and visibly bulges when the
+ * surrounding text is smaller (e.g. 13px). Force inline code (not the
+ * pre-wrapped block code, which uses our CodeBlock) to inherit the parent
+ * font-size so it always matches the surrounding text.
+ */
+.conversation-streamdown :not(pre) > code {
+	font-size: inherit;
+	background: transparent;
+	border: 1px solid
+		color-mix(in oklch, var(--muted) 87%, var(--muted-foreground) 13%);
+	margin: 0 2px;
+}
+
+/* Table layout for assistant markdown */
+.aui-md-table table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 11px;
+	line-height: 1.6;
+	margin: 0.75em 0;
+	border: 1px solid color-mix(in oklch, var(--border) 92%, transparent);
+	border-radius: 6px;
+	overflow: hidden;
+	background: transparent;
+}
+
+.aui-md-table thead th {
+	padding: 8px 14px;
+	text-align: left;
+	font-weight: 600;
+	white-space: nowrap;
+	color: var(--foreground);
+	background: var(--muted);
+	border-bottom: 1px solid color-mix(in oklch, var(--border) 92%, transparent);
+}
+
+.aui-md-table thead th:not(:last-child) {
+	border-right: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+}
+
+.aui-md-table tbody td {
+	padding: 7px 14px;
+	color: var(--foreground);
+	border-bottom: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+}
+
+.aui-md-table tbody td:not(:last-child) {
+	border-right: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+}
+
+.aui-md-table tbody tr:last-child td {
+	border-bottom: none;
+}
+
+/* Session tab: fade text under hover action icons */
+.group\/tab:hover .tab-content-fade {
+	-webkit-mask-image: linear-gradient(to left, transparent 1.2rem, black 2rem);
+	mask-image: linear-gradient(to left, transparent 1.2rem, black 2rem);
+}
+
+/* Terminal tab: fade text under the close button on hover. Mirrors
+   `tab-content-fade` (session-tab pattern) with a tighter range matching
+   the narrower reserved slot. Layout stability comes from the tab's
+   markup — `overflow-hidden` parent + `flex-1 min-w-0` label wrapper —
+   so toggling mask is purely a paint change and never shifts glyphs. */
+.group\/tab:hover .terminal-tab-fade {
+	-webkit-mask-image: linear-gradient(
+		to left,
+		transparent 0.5rem,
+		black 1.2rem
+	);
+	mask-image: linear-gradient(to left, transparent 0.5rem, black 1.2rem);
+}
+
+/* Workspace row: fade text under hover action icons (mirrors tab-content-fade).
+   Transparent/solid stops read from --row-fade-transparent/--row-fade-solid so
+   multi-icon variants (e.g. archived rows with restore + delete) can widen
+   the fade to match their actual content width. */
+.group\/row:hover .row-content-fade,
+.group\/row:focus-within .row-content-fade,
+.group\/row[data-busy="true"] .row-content-fade {
+	-webkit-mask-image: linear-gradient(
+		to left,
+		transparent var(--row-fade-transparent, 1.2rem),
+		black var(--row-fade-solid, 2rem)
+	);
+	mask-image: linear-gradient(
+		to left,
+		transparent var(--row-fade-transparent, 1.2rem),
+		black var(--row-fade-solid, 2rem)
+	);
+}
+
+/* Lexical composer: remove default paragraph margins */
+.composer-paragraph {
+	margin: 0;
+}
+
+/* Accessibility: respect prefers-reduced-motion (WCAG 2.3.3).
+   Suppresses animations and transitions for users with vestibular
+   disorders, motion sensitivity, or migraine triggers. Smooth
+   scrolling is also disabled to avoid kinetic motion. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+
+	/* Skip the 1s delayed fade-in entirely so the conversation scrollbar
+	   does not appear to "blink in" for users who opt out of motion. */
+	.conversation-scroll-area [data-slot="scroll-area-scrollbar"] {
+		animation: none !important;
+	}
+}

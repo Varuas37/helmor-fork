@@ -1,0 +1,62 @@
+[
+	{
+		"id": "uuid_1",
+		"role": "assistant",
+		"content": "{\"item\":{\"id\":\"msg_1\",\"memory_citation\":null,\"phase\":\"commentary\",\"text\":\"Listing the repository root first, then I’ll summarize the files and directories present.\",\"type\":\"agent_message\"},\"type\":\"item.completed\"}",
+		"parsed_content": {
+			"item": {
+				"id": "msg_1",
+				"memory_citation": null,
+				"phase": "commentary",
+				"text": "Listing the repository root first, then I’ll summarize the files and directories present.",
+				"type": "agent_message"
+			},
+			"type": "item.completed"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_2",
+		"role": "assistant",
+		"content": "{\"item\":{\"aggregated_output\":\"total 24\\ndrwxr-xr-x@  9 fixture-user  staff  288 Apr 17 14:45 .\\ndrwxr-xr-x@  3 fixture-user  staff   96 Apr 17 14:45 ..\\ndrwxr-xr-x@ 14 fixture-user  staff  448 Apr 17 14:53 .git\\ndrwxr-xr-x@  3 fixture-user  staff   96 Apr 17 14:45 docs\\n-rw-r--r--@  1 fixture-user  staff  263 Apr 17 14:45 package.json\\n-rw-r--r--@  1 fixture-user  staff   88 Apr 17 14:45 README.md\\ndrwxr-xr-x@  3 fixture-user  staff   96 Apr 17 14:45 scripts\\ndrwxr-xr-x@  5 fixture-user  staff  160 Apr 17 14:46 src\\n-rw-r--r--@  1 fixture-user  staff  238 Apr 17 14:45 tsconfig.json\\n\",\"command\":\"/bin/zsh -lc 'ls -la'\",\"command_actions\":[{\"command\":\"ls -la\",\"path\":null,\"type\":\"listFiles\"}],\"cwd\":\"$DUMMY_REPO\",\"duration_ms\":0,\"exit_code\":0,\"id\":\"call_1\",\"process_id\":\"12441\",\"source\":\"unifiedExecStartup\",\"status\":\"completed\",\"type\":\"command_execution\"},\"type\":\"item.completed\"}",
+		"parsed_content": {
+			"item": {
+				"aggregated_output": "total 24\ndrwxr-xr-x@  9 fixture-user  staff  288 Apr 17 14:45 .\ndrwxr-xr-x@  3 fixture-user  staff   96 Apr 17 14:45 ..\ndrwxr-xr-x@ 14 fixture-user  staff  448 Apr 17 14:53 .git\ndrwxr-xr-x@  3 fixture-user  staff   96 Apr 17 14:45 docs\n-rw-r--r--@  1 fixture-user  staff  263 Apr 17 14:45 package.json\n-rw-r--r--@  1 fixture-user  staff   88 Apr 17 14:45 README.md\ndrwxr-xr-x@  3 fixture-user  staff   96 Apr 17 14:45 scripts\ndrwxr-xr-x@  5 fixture-user  staff  160 Apr 17 14:46 src\n-rw-r--r--@  1 fixture-user  staff  238 Apr 17 14:45 tsconfig.json\n",
+				"command": "/bin/zsh -lc 'ls -la'",
+				"command_actions": [
+					{
+						"command": "ls -la",
+						"path": null,
+						"type": "listFiles"
+					}
+				],
+				"cwd": "$DUMMY_REPO",
+				"duration_ms": 0,
+				"exit_code": 0,
+				"id": "call_1",
+				"process_id": "12441",
+				"source": "unifiedExecStartup",
+				"status": "completed",
+				"type": "command_execution"
+			},
+			"type": "item.completed"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid_3",
+		"role": "assistant",
+		"content": "{\"item\":{\"id\":\"msg_2\",\"memory_citation\":null,\"phase\":\"final_answer\",\"text\":\"The repository root contains:\\n\\n- Directories: `.git`, `docs`, `scripts`, `src`\\n- Files: `package.json`, `README.md`, `tsconfig.json`\\n\\nThis looks like a small TypeScript/Node repo with source code in `src`, supporting scripts in `scripts`, and documentation in `docs`.\",\"type\":\"agent_message\"},\"type\":\"item.completed\"}",
+		"parsed_content": {
+			"item": {
+				"id": "msg_2",
+				"memory_citation": null,
+				"phase": "final_answer",
+				"text": "The repository root contains:\n\n- Directories: `.git`, `docs`, `scripts`, `src`\n- Files: `package.json`, `README.md`, `tsconfig.json`\n\nThis looks like a small TypeScript/Node repo with source code in `src`, supporting scripts in `scripts`, and documentation in `docs`.",
+				"type": "agent_message"
+			},
+			"type": "item.completed"
+		},
+		"created_at": "2026-01-01T00:00:00.000Z"
+	}
+]
