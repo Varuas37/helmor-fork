@@ -38,12 +38,17 @@ impl TestEnv {
         std::env::set_var("HELMOR_DATA_DIR", dir.path());
         data_dir::ensure_directory_structure().unwrap();
         let conn = rusqlite::Connection::open(data_dir::db_path().unwrap()).unwrap();
+        helmor_lib::db::init_connection(&conn, true).unwrap();
         helmor_lib::schema::ensure_schema(&conn).unwrap();
         conn.execute(
             "INSERT INTO repos (id, name, default_branch) VALUES ('r-1', 'Repo One', 'main')",
             [],
         )
         .unwrap();
+        drop(conn);
+        // Integration tests link helmor_lib without cfg(test), so DB pools do
+        // not auto-follow HELMOR_DATA_DIR changes between cases.
+        helmor_lib::db::init_pools().unwrap();
         Self {
             _dir: dir,
             _lock: lock,
@@ -51,7 +56,9 @@ impl TestEnv {
     }
 
     fn connection(&self) -> rusqlite::Connection {
-        rusqlite::Connection::open(data_dir::db_path().unwrap()).unwrap()
+        let conn = rusqlite::Connection::open(data_dir::db_path().unwrap()).unwrap();
+        helmor_lib::db::init_connection(&conn, true).unwrap();
+        conn
     }
 }
 

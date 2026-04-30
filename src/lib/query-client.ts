@@ -47,6 +47,20 @@ const DEFAULT_GC_TIME = 30 * 60_000;
 const SESSION_GC_TIME = 60 * 60_000;
 const PERSIST_GC_TIME = 24 * 60 * 60_000; // 24h — persisted entries live this long
 
+function hasTauriRuntime() {
+	if (typeof window === "undefined") {
+		return false;
+	}
+	const internals = (window as Window & { __TAURI_INTERNALS__?: unknown })
+		.__TAURI_INTERNALS__;
+	return (
+		typeof internals === "object" &&
+		internals !== null &&
+		"transformCallback" in internals &&
+		typeof internals.transformCallback === "function"
+	);
+}
+
 export const helmorQueryKeys = {
 	workspaceGroups: ["workspaceGroups"] as const,
 	archivedWorkspaces: ["archivedWorkspaces"] as const,
@@ -125,6 +139,21 @@ export function createHelmorQueryClient() {
 	// always refetch on focus, while remote GitHub queries keep their
 	// staleTime: 30s to avoid hammering the API.
 	focusManager.setEventListener((handleFocus) => {
+		if (typeof window === "undefined") {
+			return () => {};
+		}
+
+		if (!hasTauriRuntime()) {
+			const onFocus = () => handleFocus(true);
+			const onBlur = () => handleFocus(false);
+			window.addEventListener("focus", onFocus);
+			window.addEventListener("blur", onBlur);
+			return () => {
+				window.removeEventListener("focus", onFocus);
+				window.removeEventListener("blur", onBlur);
+			};
+		}
+
 		let unlistenFocus: (() => void) | undefined;
 		let unlistenBlur: (() => void) | undefined;
 

@@ -1,13 +1,65 @@
 import "@testing-library/jest-dom/vitest";
 import { configure } from "@testing-library/react";
 import { createElement, type SVGProps } from "react";
-import { vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 // Default 1000ms is too tight for GitHub Actions runners where a 55-test
 // file can take ~55s of transform+import time; waitFor checks bump into the
 // ceiling during multi-render settling. Only affects vitest; production code
 // is unchanged.
 configure({ asyncUtilTimeout: 3000 });
+
+function createTestStorage(): Storage {
+	const store = new Map<string, string>();
+	return {
+		get length() {
+			return store.size;
+		},
+		clear() {
+			store.clear();
+		},
+		getItem(key: string) {
+			return store.get(key) ?? null;
+		},
+		key(index: number) {
+			return [...store.keys()][index] ?? null;
+		},
+		removeItem(key: string) {
+			store.delete(key);
+		},
+		setItem(key: string, value: string) {
+			store.set(key, String(value));
+		},
+	};
+}
+
+function installTestStorage() {
+	if (typeof window === "undefined") {
+		return;
+	}
+
+	const storage = createTestStorage();
+	Object.defineProperty(window, "localStorage", {
+		configurable: true,
+		value: storage,
+	});
+	if (globalThis !== window) {
+		Object.defineProperty(globalThis, "localStorage", {
+			configurable: true,
+			get: () => window.localStorage,
+			set: (value: Storage) => {
+				Object.defineProperty(window, "localStorage", {
+					configurable: true,
+					value,
+				});
+			},
+		});
+	}
+}
+
+installTestStorage();
+beforeEach(installTestStorage);
+afterEach(installTestStorage);
 
 // React 19.2's dev build schedules passive-effect work through
 // `setImmediate`, and its callback reads `window.event` (react-dom's
