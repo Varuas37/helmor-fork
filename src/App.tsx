@@ -2862,8 +2862,8 @@ function AppShell({
 												className={cn(
 													"relative h-full shrink-0 bg-sidebar",
 													inspectorTabsZoomed
-														? "overflow-visible"
-														: "overflow-hidden",
+														? "z-[80] overflow-visible"
+														: "z-0 overflow-hidden",
 												)}
 												style={{ width: `${inspectorWidth}px` }}
 											>
