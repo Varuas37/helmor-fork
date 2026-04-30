@@ -615,6 +615,62 @@ describe("useWorkspaceCommitLifecycle", () => {
 		});
 	});
 
+	it("dispatches merge through an action session when a merge command is configured", async () => {
+		const queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false } },
+		});
+		const onSelectSession = vi.fn();
+
+		const { result } = renderHook(
+			() =>
+				useWorkspaceCommitLifecycle({
+					queryClient,
+					selectedWorkspaceId: "workspace-1",
+					selectedWorkspaceIdRef: { current: "workspace-1" },
+					selectedRepoId: "repo-1",
+					selectedWorkspaceBranch: "feature/a",
+					selectedWorkspaceTargetBranch: "main",
+					selectedWorkspaceRemote: "origin",
+					globalMergePrCommand:
+						"gh pr merge $" +
+						"{CHANGE_REQUEST_NUMBER} --squash --delete-branch",
+					changeRequest: {
+						number: 53,
+						title: "Fix overflow",
+						url: "https://github.com/example/repo/pull/53",
+						state: "OPEN",
+						isMerged: false,
+					},
+					forgeActionStatus: {
+						...EMPTY_FORGE_ACTION_STATUS,
+						mergeable: "MERGEABLE",
+					},
+					workspaceGitActionStatus: EMPTY_GIT_ACTION_STATUS,
+					completedSessionIds: new Set<string>(),
+					interactionRequiredSessionIds: new Set<string>(),
+					sendingSessionIds: new Set<string>(),
+					onSelectSession,
+				}),
+			{ wrapper: createWrapper(queryClient) },
+		);
+
+		await act(async () => {
+			await result.current.handleInspectorCommitAction("merge");
+		});
+
+		expect(apiMocks.mergeWorkspaceChangeRequest).not.toHaveBeenCalled();
+		expect(apiMocks.createSession).toHaveBeenCalledWith("workspace-1", {
+			actionKind: "merge",
+		});
+		expect(onSelectSession).toHaveBeenCalledWith("session-action");
+		expect(result.current.pendingPromptForSession).toMatchObject({
+			sessionId: "session-action",
+		});
+		expect(result.current.pendingPromptForSession?.prompt).toContain(
+			"`gh pr merge 53 --squash --delete-branch`",
+		);
+	});
+
 	it("rolls back optimistic group + detail moves when merge fails", async () => {
 		const queryClient = new QueryClient({
 			defaultOptions: { queries: { retry: false } },

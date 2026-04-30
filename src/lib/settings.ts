@@ -23,6 +23,9 @@ export type AppSettings = {
 	fontSize: number;
 	branchPrefixType: "github" | "custom" | "none";
 	branchPrefixCustom: string;
+	githubSignInSkipped: boolean;
+	gitCreatePrCommand: string;
+	gitMergePrCommand: string;
 	theme: ThemeMode;
 	fileIconPack: FileIconPack;
 	notifications: boolean;
@@ -59,6 +62,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	fontSize: 14,
 	branchPrefixType: "github",
 	branchPrefixCustom: "",
+	githubSignInSkipped: false,
+	gitCreatePrCommand: "",
+	gitMergePrCommand: "",
 	theme: "system",
 	fileIconPack: "default",
 	notifications: true,
@@ -92,6 +98,9 @@ const SETTINGS_KEY_MAP: Record<Exclude<keyof AppSettings, "theme">, string> = {
 	fontSize: "app.font_size",
 	branchPrefixType: "branch_prefix_type",
 	branchPrefixCustom: "branch_prefix_custom",
+	githubSignInSkipped: "app.github_sign_in_skipped",
+	gitCreatePrCommand: "app.git_create_pr_command",
+	gitMergePrCommand: "app.git_merge_pr_command",
 	fileIconPack: "app.file_icon_pack",
 	notifications: "app.notifications",
 	lastWorkspaceId: "app.last_workspace_id",
@@ -181,6 +190,16 @@ export async function loadSettings(): Promise<AppSettings> {
 			branchPrefixCustom:
 				raw[SETTINGS_KEY_MAP.branchPrefixCustom] ??
 				DEFAULT_SETTINGS.branchPrefixCustom,
+			githubSignInSkipped:
+				raw[SETTINGS_KEY_MAP.githubSignInSkipped] !== undefined
+					? raw[SETTINGS_KEY_MAP.githubSignInSkipped] === "true"
+					: DEFAULT_SETTINGS.githubSignInSkipped,
+			gitCreatePrCommand:
+				raw[SETTINGS_KEY_MAP.gitCreatePrCommand] ??
+				DEFAULT_SETTINGS.gitCreatePrCommand,
+			gitMergePrCommand:
+				raw[SETTINGS_KEY_MAP.gitMergePrCommand] ??
+				DEFAULT_SETTINGS.gitMergePrCommand,
 			theme:
 				(localStorage.getItem(THEME_STORAGE_KEY) as AppSettings["theme"]) ??
 				DEFAULT_SETTINGS.theme,

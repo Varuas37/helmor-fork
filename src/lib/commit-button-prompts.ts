@@ -1,6 +1,15 @@
 import type { WorkspaceCommitButtonMode } from "@/features/commit/button";
-import type { ForgeDetection, RepoPreferences } from "@/lib/api";
+import type {
+	ChangeRequestInfo,
+	ForgeDetection,
+	RepoPreferences,
+} from "@/lib/api";
 import { forgePromptDialect } from "@/lib/forge-dialect";
+import {
+	type GitActionCommandSettings,
+	resolveCreatePrCommand,
+	resolveMergePrCommand,
+} from "@/lib/git-action-command-templates";
 import {
 	type RepoPreferenceKey,
 	resolveRepoPreferencePrompt,
@@ -8,7 +17,7 @@ import {
 
 type ActionSessionMode = Exclude<
 	WorkspaceCommitButtonMode,
-	"push" | "merge" | "closed" | "merged"
+	"push" | "closed" | "merged"
 >;
 
 // Modes that delegate to a `RepoPreferenceKey`. The other action modes
@@ -25,12 +34,34 @@ const ACTION_MODE_TO_PREFERENCE_KEY: Record<
 	"resolve-conflicts": "resolveConflicts",
 };
 
+function buildMergePrompt(
+	command: string,
+	forge?: ForgeDetection | null,
+	changeRequest?: ChangeRequestInfo | null,
+): string {
+	const dialect = forgePromptDialect(forge);
+	const changeRequestReference = changeRequest?.url
+		? ` at ${changeRequest.url}`
+		: "";
+
+	return `Merge the current ${dialect.changeRequestFullName}${changeRequestReference} using \`${command}\`.
+
+Do the following, in order:
+1. Run \`git status\` and confirm there is no unexpected local work blocking the merge.
+2. Confirm the ${dialect.changeRequestName} is still mergeable and that the command targets the current branch/${dialect.changeRequestName}.
+3. Run \`${command}\`.
+4. Verify the ${dialect.changeRequestName} is merged, then report the final status and URL.
+
+Don't stop to ask for confirmation unless the merge command itself reports a conflict, missing approval, or another unrecoverable blocker.`;
+}
+
 export function buildCommitButtonPrompt(
 	mode: ActionSessionMode,
 	repoPreferences?: RepoPreferences | null,
 	targetBranch?: string | null,
 	forge?: ForgeDetection | null,
 	remote?: string | null,
+	commandSettings?: GitActionCommandSettings | null,
 ): string {
 	const remoteName =
 		remote && remote.trim().length > 0 ? remote.trim() : "origin";
@@ -56,6 +87,36 @@ Use \`${dialect.reopenCommand}\` + \`${dialect.commentCommand}\`. Report the ${d
 		}
 
 		case "create-pr":
+			return resolveRepoPreferencePrompt({
+				key: ACTION_MODE_TO_PREFERENCE_KEY[mode],
+				repoPreferences,
+				targetBranch,
+				forge,
+				remote,
+				createPrCommand: resolveCreatePrCommand({
+					repoPreferences,
+					globalCommand: commandSettings?.globalCreatePrCommand,
+					targetBranch: targetBranch?.trim() ?? "",
+					forge,
+					remote,
+					currentBranch: commandSettings?.currentBranch,
+					changeRequest: commandSettings?.changeRequest,
+				}),
+			});
+		case "merge": {
+			const command = resolveMergePrCommand({
+				repoPreferences,
+				globalCommand: commandSettings?.globalMergePrCommand,
+				targetBranch,
+				remote,
+				currentBranch: commandSettings?.currentBranch,
+				changeRequest: commandSettings?.changeRequest,
+			});
+			if (!command) {
+				throw new Error("Missing merge command template.");
+			}
+			return buildMergePrompt(command, forge, commandSettings?.changeRequest);
+		}
 		case "fix":
 		case "resolve-conflicts":
 			return resolveRepoPreferencePrompt({
@@ -76,6 +137,7 @@ export function isActionSessionMode(
 		mode === "commit-and-push" ||
 		mode === "fix" ||
 		mode === "resolve-conflicts" ||
+		mode === "merge" ||
 		mode === "open-pr"
 	);
 }

@@ -14,11 +14,13 @@ export function GithubIdentityGate({
 	onConnectGithub,
 	onCopyGithubCode,
 	onCancelGithubConnect,
+	onSkipGithubSignIn,
 }: {
 	identityState: GithubIdentityState;
 	onConnectGithub: () => void;
 	onCopyGithubCode: (userCode: string) => Promise<boolean>;
 	onCancelGithubConnect: () => void;
+	onSkipGithubSignIn: () => void;
 }) {
 	const [codeCopied, setCodeCopied] = useState(false);
 
@@ -111,6 +113,9 @@ export function GithubIdentityGate({
 							<Button variant="ghost" size="sm" onClick={onCancelGithubConnect}>
 								Cancel
 							</Button>
+							<Button variant="link" size="sm" onClick={onSkipGithubSignIn}>
+								Skip for now
+							</Button>
 						</div>
 					) : identityState.status === "unconfigured" ? (
 						<div className="mt-10 flex w-full max-w-md flex-col items-center gap-3 text-center">
@@ -126,6 +131,13 @@ export function GithubIdentityGate({
 								<GithubBrandIcon size={16} data-icon="inline-start" />
 								Continue with GitHub
 							</Button>
+							<Button
+								variant="secondary"
+								size="lg"
+								onClick={onSkipGithubSignIn}
+							>
+								Skip GitHub sign-in
+							</Button>
 						</div>
 					) : identityState.status === "checking" ? (
 						<div className="mt-10 inline-flex items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -133,7 +145,7 @@ export function GithubIdentityGate({
 							Restoring your last session
 						</div>
 					) : (
-						<div className="mt-10 flex justify-center">
+						<div className="mt-10 flex flex-col items-center gap-3">
 							<Button
 								onClick={onConnectGithub}
 								size="lg"
@@ -143,6 +155,9 @@ export function GithubIdentityGate({
 								{identityState.status === "error"
 									? "Retry with GitHub"
 									: "Continue with GitHub"}
+							</Button>
+							<Button variant="ghost" size="sm" onClick={onSkipGithubSignIn}>
+								Skip GitHub sign-in
 							</Button>
 						</div>
 					)}

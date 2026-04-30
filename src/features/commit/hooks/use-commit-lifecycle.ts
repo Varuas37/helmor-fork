@@ -18,6 +18,7 @@ import {
 	loadRepoPreferences,
 	mergeWorkspaceChangeRequest,
 	pushWorkspaceToRemote,
+	type RepoPreferences,
 	refreshWorkspaceChangeRequest,
 	type WorkspaceDetail,
 	type WorkspaceGitActionStatus,
@@ -32,6 +33,7 @@ import {
 	buildCommitButtonPrompt,
 	isActionSessionMode,
 } from "@/lib/commit-button-prompts";
+import { resolveMergePrCommand } from "@/lib/git-action-command-templates";
 import {
 	helmorQueryKeys,
 	workspaceForgeQueryOptions,
@@ -146,8 +148,11 @@ export function useWorkspaceCommitLifecycle({
 	selectedWorkspaceId,
 	selectedWorkspaceIdRef,
 	selectedRepoId,
+	selectedWorkspaceBranch,
 	selectedWorkspaceTargetBranch,
 	selectedWorkspaceRemote,
+	globalCreatePrCommand,
+	globalMergePrCommand,
 	changeRequest,
 	forgeDetection,
 	forgeActionStatus,
@@ -163,11 +168,14 @@ export function useWorkspaceCommitLifecycle({
 	selectedWorkspaceId: string | null;
 	selectedWorkspaceIdRef: MutableRefObject<string | null>;
 	selectedRepoId: string | null;
+	selectedWorkspaceBranch?: string | null;
 	selectedWorkspaceTargetBranch?: string | null;
 	/** Git remote name (e.g. "origin") for the selected workspace's repo.
 	 *  Threaded into PR/push prompts so the agent gets a concrete remote
 	 *  instead of a literal `<remote>` placeholder. */
 	selectedWorkspaceRemote?: string | null;
+	globalCreatePrCommand?: string | null;
+	globalMergePrCommand?: string | null;
 	changeRequest?: ChangeRequestInfo | null;
 	forgeDetection?: ForgeDetection | null;
 	forgeActionStatus?: ForgeActionStatus | null;
@@ -226,38 +234,67 @@ export function useWorkspaceCommitLifecycle({
 			completedSessionHandledRef.current = null;
 			console.log("[commitButton] begin", { mode, workspaceId });
 
-			if (mode === "merge" || mode === "closed") {
-				// ── Merge pre-validation ─────────────────────────────────
-				if (mode === "merge") {
-					const currentMergeable = forgeActionStatusRef.current?.mergeable;
-					if (currentMergeable === "CONFLICTING") {
-						console.warn(
-							`[commitButton] merge blocked: ${changeRequestName} has merge conflicts`,
-						);
-						pushToast?.(
-							`${changeRequestName} has merge conflicts and cannot be merged yet.`,
-							"Merge blocked",
-							"destructive",
-						);
-						return;
-					}
-					if (currentMergeable === "UNKNOWN") {
-						console.warn(
-							"[commitButton] merge blocked: mergeable status still computing, please wait",
-						);
-						pushToast?.(
-							"Mergeability is still being calculated. Please wait and try again.",
-							"Merge blocked",
-							"destructive",
-						);
-						// Trigger a refresh so the status resolves sooner
-						void queryClient.invalidateQueries({
-							queryKey: helmorQueryKeys.workspaceForgeActionStatus(workspaceId),
-						});
-						return;
-					}
-				}
+			let repoPreferencesForAction: RepoPreferences | null | undefined;
+			let useMergeCommandSession = false;
 
+			if (mode === "merge" && selectedRepoId) {
+				repoPreferencesForAction = await loadRepoPreferences(
+					selectedRepoId,
+				).catch((error) => {
+					console.warn("[commitButton] failed to load repo preferences", error);
+					return null;
+				});
+				useMergeCommandSession =
+					resolveMergePrCommand({
+						repoPreferences: repoPreferencesForAction,
+						globalCommand: globalMergePrCommand,
+						targetBranch: selectedWorkspaceTargetBranch,
+						remote: selectedWorkspaceRemote,
+						currentBranch: selectedWorkspaceBranch,
+						changeRequest: currentChangeRequest,
+					}) !== null;
+			} else if (mode === "merge") {
+				useMergeCommandSession =
+					resolveMergePrCommand({
+						globalCommand: globalMergePrCommand,
+						targetBranch: selectedWorkspaceTargetBranch,
+						remote: selectedWorkspaceRemote,
+						currentBranch: selectedWorkspaceBranch,
+						changeRequest: currentChangeRequest,
+					}) !== null;
+			}
+
+			if (mode === "merge") {
+				const currentMergeable = forgeActionStatusRef.current?.mergeable;
+				if (currentMergeable === "CONFLICTING") {
+					console.warn(
+						`[commitButton] merge blocked: ${changeRequestName} has merge conflicts`,
+					);
+					pushToast?.(
+						`${changeRequestName} has merge conflicts and cannot be merged yet.`,
+						"Merge blocked",
+						"destructive",
+					);
+					return;
+				}
+				if (currentMergeable === "UNKNOWN") {
+					console.warn(
+						"[commitButton] merge blocked: mergeable status still computing, please wait",
+					);
+					pushToast?.(
+						"Mergeability is still being calculated. Please wait and try again.",
+						"Merge blocked",
+						"destructive",
+					);
+					// Trigger a refresh so the status resolves sooner.
+					void queryClient.invalidateQueries({
+						queryKey: helmorQueryKeys.workspaceForgeActionStatus(workspaceId),
+					});
+					return;
+				}
+			}
+
+			if ((mode === "merge" && !useMergeCommandSession) || mode === "closed") {
 				const cachedChangeRequest =
 					queryClient.getQueryData<ChangeRequestInfo | null>(
 						helmorQueryKeys.workspaceChangeRequest(workspaceId),
@@ -363,9 +400,12 @@ export function useWorkspaceCommitLifecycle({
 				const { sessionId } = await createSession(workspaceId, {
 					actionKind: mode,
 				});
-				const repoPreferences = selectedRepoId
-					? await loadRepoPreferences(selectedRepoId)
-					: null;
+				const repoPreferences =
+					repoPreferencesForAction !== undefined
+						? repoPreferencesForAction
+						: selectedRepoId
+							? await loadRepoPreferences(selectedRepoId)
+							: null;
 				const forge = await queryClient
 					.ensureQueryData(workspaceForgeQueryOptions(workspaceId))
 					.catch(() => null);
@@ -375,6 +415,12 @@ export function useWorkspaceCommitLifecycle({
 					selectedWorkspaceTargetBranch,
 					forge,
 					selectedWorkspaceRemote,
+					{
+						globalCreatePrCommand,
+						globalMergePrCommand,
+						currentBranch: selectedWorkspaceBranch,
+						changeRequest: currentChangeRequest,
+					},
 				);
 				console.log("[commitButton] session created", { sessionId });
 
@@ -408,8 +454,12 @@ export function useWorkspaceCommitLifecycle({
 			changeRequestName,
 			queryClient,
 			selectedRepoId,
+			selectedWorkspaceBranch,
 			selectedWorkspaceTargetBranch,
 			selectedWorkspaceRemote,
+			globalCreatePrCommand,
+			globalMergePrCommand,
+			currentChangeRequest,
 			selectedWorkspaceIdRef,
 		],
 	);

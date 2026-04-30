@@ -49,6 +49,7 @@ import {
 	loadGithubIdentitySession,
 	type RepositoryCreateOption,
 } from "@/lib/api";
+import { GIT_ACTION_COMMAND_TEMPLATE_HELP } from "@/lib/git-action-command-templates";
 import {
 	agentModelSectionsQueryOptions,
 	helmorQueryKeys,
@@ -585,55 +586,113 @@ export const SettingsDialog = memo(function SettingsDialog({
 							)}
 
 							{activeSection === "git" && (
-								<SettingsGroup>
-									<div className="py-5">
-										<div className="text-[13px] font-medium leading-snug text-foreground">
-											Branch Prefix
+								<div className="flex flex-col gap-3">
+									<SettingsGroup>
+										<div className="py-5">
+											<div className="text-[13px] font-medium leading-snug text-foreground">
+												Branch Prefix
+											</div>
+											<div className="mt-1 text-[12px] leading-snug text-muted-foreground">
+												Prefix added to branch names when creating new
+												workspaces
+											</div>
+											<RadioGroup
+												value={settings.branchPrefixType}
+												onValueChange={(value: string) =>
+													updateSettings({
+														branchPrefixType: value as
+															| "github"
+															| "custom"
+															| "none",
+													})
+												}
+												className="mt-4 gap-1"
+											>
+												<RadioOption
+													value="github"
+													label={`GitHub username${githubLogin ? ` (${githubLogin})` : ""}`}
+												/>
+												<RadioOption value="custom" label="Custom" />
+												{settings.branchPrefixType === "custom" && (
+													<div className="ml-7">
+														<Input
+															type="text"
+															value={settings.branchPrefixCustom}
+															onChange={(e) =>
+																updateSettings({
+																	branchPrefixCustom: e.target.value,
+																})
+															}
+															placeholder="e.g. feat/"
+															className="w-full bg-muted/30 text-[13px] text-foreground placeholder:text-muted-foreground/50"
+														/>
+														{settings.branchPrefixCustom && (
+															<div className="mt-1.5 text-[12px] text-muted-foreground">
+																Preview: {settings.branchPrefixCustom}tokyo
+															</div>
+														)}
+													</div>
+												)}
+												<RadioOption value="none" label="None" />
+											</RadioGroup>
 										</div>
-										<div className="mt-1 text-[12px] leading-snug text-muted-foreground">
-											Prefix added to branch names when creating new workspaces
-										</div>
-										<RadioGroup
-											value={settings.branchPrefixType}
-											onValueChange={(value: string) =>
-												updateSettings({
-													branchPrefixType: value as
-														| "github"
-														| "custom"
-														| "none",
-												})
-											}
-											className="mt-4 gap-1"
-										>
-											<RadioOption
-												value="github"
-												label={`GitHub username${githubLogin ? ` (${githubLogin})` : ""}`}
-											/>
-											<RadioOption value="custom" label="Custom" />
-											{settings.branchPrefixType === "custom" && (
-												<div className="ml-7">
-													<Input
-														type="text"
-														value={settings.branchPrefixCustom}
-														onChange={(e) =>
+									</SettingsGroup>
+
+									<SettingsGroup>
+										<div className="py-5">
+											<div className="text-[13px] font-medium leading-snug text-foreground">
+												Action command templates
+											</div>
+											<div className="mt-1 text-[12px] leading-snug text-muted-foreground">
+												Optional commands used when an action is dispatched to
+												the agent. Repository settings can override these.
+											</div>
+											<div className="mt-4 grid gap-4">
+												<label
+													htmlFor="settings-git-create-pr-command"
+													className="block"
+												>
+													<span className="text-[12px] font-medium text-foreground">
+														Create PR command
+													</span>
+													<Textarea
+														id="settings-git-create-pr-command"
+														value={settings.gitCreatePrCommand}
+														onChange={(event) =>
 															updateSettings({
-																branchPrefixCustom: e.target.value,
+																gitCreatePrCommand: event.target.value,
 															})
 														}
-														placeholder="e.g. feat/"
-														className="w-full bg-muted/30 text-[13px] text-foreground placeholder:text-muted-foreground/50"
+														placeholder="Leave empty for gh/glab default create command."
+														className="mt-2 min-h-[82px] resize-y bg-muted/30 font-mono text-[12px] text-foreground placeholder:text-muted-foreground/50"
 													/>
-													{settings.branchPrefixCustom && (
-														<div className="mt-1.5 text-[12px] text-muted-foreground">
-															Preview: {settings.branchPrefixCustom}tokyo
-														</div>
-													)}
-												</div>
-											)}
-											<RadioOption value="none" label="None" />
-										</RadioGroup>
-									</div>
-								</SettingsGroup>
+												</label>
+												<label
+													htmlFor="settings-git-merge-pr-command"
+													className="block"
+												>
+													<span className="text-[12px] font-medium text-foreground">
+														Merge PR command
+													</span>
+													<Textarea
+														id="settings-git-merge-pr-command"
+														value={settings.gitMergePrCommand}
+														onChange={(event) =>
+															updateSettings({
+																gitMergePrCommand: event.target.value,
+															})
+														}
+														placeholder="Leave empty to use Helmor's built-in merge action."
+														className="mt-2 min-h-[82px] resize-y bg-muted/30 font-mono text-[12px] text-foreground placeholder:text-muted-foreground/50"
+													/>
+												</label>
+											</div>
+											<p className="mt-3 text-[12px] leading-snug text-muted-foreground">
+												{GIT_ACTION_COMMAND_TEMPLATE_HELP}
+											</p>
+										</div>
+									</SettingsGroup>
+								</div>
 							)}
 
 							{activeSection === "experimental" && (

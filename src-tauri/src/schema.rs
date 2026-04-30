@@ -383,6 +383,21 @@ fn run_migrations(connection: &Connection) -> Result<()> {
             .context("Failed to add branch_prefix_custom column")?;
     }
 
+    if has_table(connection, "repos")
+        && !has_column(connection, "repos", "custom_command_create_pr")
+    {
+        connection
+            .execute_batch("ALTER TABLE repos ADD COLUMN custom_command_create_pr TEXT")
+            .context("Failed to add custom_command_create_pr column")?;
+    }
+
+    if has_table(connection, "repos") && !has_column(connection, "repos", "custom_command_merge_pr")
+    {
+        connection
+            .execute_batch("ALTER TABLE repos ADD COLUMN custom_command_merge_pr TEXT")
+            .context("Failed to add custom_command_merge_pr column")?;
+    }
+
     if has_table(connection, "workspaces") && !has_column(connection, "workspaces", "pr_sync_state")
     {
         connection
@@ -472,6 +487,8 @@ CREATE TABLE IF NOT EXISTS repos (
     auto_run_setup INTEGER DEFAULT 1,
     forge_provider TEXT,
     branch_prefix_custom TEXT,
+    custom_command_create_pr TEXT,
+    custom_command_merge_pr TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -1112,6 +1129,62 @@ mod tests {
         let (connection, _dir) = open_test_db();
         ensure_schema(&connection).unwrap();
         assert!(column_exists(&connection, "repos", "forge_provider"));
+    }
+
+    #[test]
+    fn repo_action_command_columns_added_to_legacy_and_idempotent() {
+        let (connection, _dir) = open_test_db();
+        create_legacy_schema(&connection);
+        assert!(!column_exists(
+            &connection,
+            "repos",
+            "custom_command_create_pr"
+        ));
+        assert!(!column_exists(
+            &connection,
+            "repos",
+            "custom_command_merge_pr"
+        ));
+
+        run_migrations(&connection).unwrap();
+        assert!(column_exists(
+            &connection,
+            "repos",
+            "custom_command_create_pr"
+        ));
+        assert!(column_exists(
+            &connection,
+            "repos",
+            "custom_command_merge_pr"
+        ));
+
+        run_migrations(&connection).unwrap();
+        assert!(column_exists(
+            &connection,
+            "repos",
+            "custom_command_create_pr"
+        ));
+        assert!(column_exists(
+            &connection,
+            "repos",
+            "custom_command_merge_pr"
+        ));
+    }
+
+    #[test]
+    fn repo_action_command_columns_present_on_fresh_install() {
+        let (connection, _dir) = open_test_db();
+        ensure_schema(&connection).unwrap();
+        assert!(column_exists(
+            &connection,
+            "repos",
+            "custom_command_create_pr"
+        ));
+        assert!(column_exists(
+            &connection,
+            "repos",
+            "custom_command_merge_pr"
+        ));
     }
 
     #[test]

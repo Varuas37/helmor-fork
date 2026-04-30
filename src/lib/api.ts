@@ -2522,6 +2522,8 @@ export type RepoPreferences = {
 	resolveConflicts?: string | null;
 	branchRename?: string | null;
 	general?: string | null;
+	createPrCommand?: string | null;
+	mergePrCommand?: string | null;
 };
 
 export type ScriptEvent =

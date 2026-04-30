@@ -668,6 +668,14 @@ function AppShell({
 		isLoaded: areSettingsLoaded,
 		updateSettings,
 	} = useSettings();
+	const isAppUnlocked = isIdentityConnected || appSettings.githubSignInSkipped;
+	const handleSkipGithubSignIn = useCallback(() => {
+		void updateSettings({ githubSignInSkipped: true });
+	}, [updateSettings]);
+	const handleConnectGithubFromGate = useCallback(() => {
+		void updateSettings({ githubSignInSkipped: false });
+		void handleStartGithubIdentityConnect();
+	}, [handleStartGithubIdentityConnect, updateSettings]);
 	const appUpdateStatus = useAppUpdater();
 	useDockUnreadBadge();
 	useEnsureDefaultModel();
@@ -791,11 +799,11 @@ function AppShell({
 
 	const navigationGroupsQuery = useQuery({
 		...workspaceGroupsQueryOptions(),
-		enabled: isIdentityConnected,
+		enabled: isAppUnlocked,
 	});
 	const navigationArchivedQuery = useQuery({
 		...archivedWorkspacesQueryOptions(),
-		enabled: isIdentityConnected,
+		enabled: isAppUnlocked,
 	});
 	const workspaceGroups = navigationGroupsQuery.data ?? [];
 	const archivedRows = useMemo(
@@ -804,7 +812,7 @@ function AppShell({
 	);
 	const selectedWorkspaceDetailQuery = useQuery({
 		...workspaceDetailQueryOptions(selectedWorkspaceId ?? "__none__"),
-		enabled: isIdentityConnected && selectedWorkspaceId !== null,
+		enabled: isAppUnlocked && selectedWorkspaceId !== null,
 	});
 	const selectedWorkspaceDetail =
 		selectedWorkspaceDetailQuery.data ??
@@ -1284,7 +1292,7 @@ function AppShell({
 	}, [displayedWorkspaceId, primeInitialWorkspaceDisplay, selectedWorkspaceId]);
 
 	useEffect(() => {
-		if (!isIdentityConnected) {
+		if (!isAppUnlocked) {
 			return;
 		}
 
@@ -1340,7 +1348,7 @@ function AppShell({
 		};
 	}, [
 		archivedRows,
-		isIdentityConnected,
+		isAppUnlocked,
 		primeWorkspaceDisplay,
 		selectedWorkspaceId,
 		workspaceGroups,
@@ -1525,11 +1533,14 @@ function AppShell({
 		selectedWorkspaceId,
 		selectedWorkspaceIdRef,
 		selectedRepoId: selectedWorkspaceDetailQuery.data?.repoId ?? null,
+		selectedWorkspaceBranch: selectedWorkspaceDetailQuery.data?.branch ?? null,
 		selectedWorkspaceTargetBranch:
 			selectedWorkspaceDetailQuery.data?.intendedTargetBranch ??
 			selectedWorkspaceDetailQuery.data?.defaultBranch ??
 			null,
 		selectedWorkspaceRemote: selectedWorkspaceDetailQuery.data?.remote ?? null,
+		globalCreatePrCommand: appSettings.gitCreatePrCommand,
+		globalMergePrCommand: appSettings.gitMergePrCommand,
 		changeRequest: workspaceChangeRequest,
 		forgeDetection: workspaceForge,
 		forgeActionStatus: workspaceForgeActionStatus,
@@ -2065,40 +2076,39 @@ function AppShell({
 				id: "workspace.openInEditor" as const,
 				callback: handleOpenPreferredEditor,
 				enabled:
-					isIdentityConnected &&
-					Boolean(selectedWorkspaceId && preferredEditor),
+					isAppUnlocked && Boolean(selectedWorkspaceId && preferredEditor),
 			},
 			{
 				id: "workspace.new" as const,
 				callback: () =>
 					window.dispatchEvent(new Event("helmor:open-new-workspace")),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "workspace.addRepository" as const,
 				callback: () =>
 					window.dispatchEvent(new Event("helmor:open-add-repository")),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "workspace.previous" as const,
 				callback: () => handleNavigateWorkspaces(-1),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "workspace.next" as const,
 				callback: () => handleNavigateWorkspaces(1),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "session.previous" as const,
 				callback: () => handleNavigateSessions(-1),
-				enabled: isIdentityConnected && workspaceViewMode === "conversation",
+				enabled: isAppUnlocked && workspaceViewMode === "conversation",
 			},
 			{
 				id: "session.next" as const,
 				callback: () => handleNavigateSessions(1),
-				enabled: isIdentityConnected && workspaceViewMode === "conversation",
+				enabled: isAppUnlocked && workspaceViewMode === "conversation",
 			},
 			{
 				id: "session.close" as const,
@@ -2106,83 +2116,83 @@ function AppShell({
 					if (!getCloseableCurrentSession()) return;
 					void handleCloseSelectedSession();
 				},
-				enabled: isIdentityConnected && workspaceViewMode === "conversation",
+				enabled: isAppUnlocked && workspaceViewMode === "conversation",
 			},
 			{
 				id: "session.new" as const,
 				callback: (): void => void handleCreateSession(),
-				enabled: isIdentityConnected && workspaceViewMode === "conversation",
+				enabled: isAppUnlocked && workspaceViewMode === "conversation",
 			},
 			{
 				id: "session.reopenClosed" as const,
 				callback: () => void handleReopenClosedSession(),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "script.run" as const,
 				callback: () => window.dispatchEvent(new Event("helmor:run-script")),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "theme.toggle" as const,
 				callback: handleToggleTheme,
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "sidebar.left.toggle" as const,
 				callback: () => setSidebarCollapsed((collapsed) => !collapsed),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "sidebar.right.toggle" as const,
 				callback: () => setInspectorCollapsed((collapsed) => !collapsed),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "zen.toggle" as const,
 				callback: handleToggleZenMode,
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "action.createPr" as const,
 				callback: () => void handleInspectorCommitAction("create-pr"),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "action.commitAndPush" as const,
 				callback: () => void handleInspectorCommitAction("commit-and-push"),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "action.pullLatest" as const,
 				callback: () => void handlePullLatest(),
-				enabled: isIdentityConnected && Boolean(selectedWorkspaceId),
+				enabled: isAppUnlocked && Boolean(selectedWorkspaceId),
 			},
 			{
 				id: "action.mergePr" as const,
 				callback: () => void handleInspectorCommitAction("merge"),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "action.fixErrors" as const,
 				callback: () => void handleInspectorCommitAction("fix"),
-				enabled: isIdentityConnected,
+				enabled: isAppUnlocked,
 			},
 			{
 				id: "action.openPullRequest" as const,
 				callback: handleOpenPullRequest,
-				enabled: isIdentityConnected && Boolean(pullRequestUrl),
+				enabled: isAppUnlocked && Boolean(pullRequestUrl),
 			},
 			{
 				id: "composer.focus" as const,
 				callback: () =>
 					window.dispatchEvent(new Event("helmor:focus-composer")),
-				enabled: isIdentityConnected && workspaceViewMode === "conversation",
+				enabled: isAppUnlocked && workspaceViewMode === "conversation",
 			},
 			{
 				id: "composer.openModelPicker" as const,
 				callback: handleOpenModelPicker,
-				enabled: isIdentityConnected && workspaceViewMode === "conversation",
+				enabled: isAppUnlocked && workspaceViewMode === "conversation",
 			},
 			{
 				id: "zoom.in" as const,
@@ -2220,7 +2230,7 @@ function AppShell({
 			handleReopenClosedSession,
 			handleToggleTheme,
 			handleToggleZenMode,
-			isIdentityConnected,
+			isAppUnlocked,
 			preferredEditor,
 			pullRequestUrl,
 			selectedWorkspaceId,
@@ -2328,7 +2338,7 @@ function AppShell({
 	// its own onCloseRequested listener.  No need for a separate hook here.
 
 	useEffect(() => {
-		if (!isIdentityConnected || workspaceViewMode === "editor") {
+		if (!isAppUnlocked || workspaceViewMode === "editor") {
 			return;
 		}
 
@@ -2356,7 +2366,7 @@ function AppShell({
 	}, [
 		getCloseableCurrentSession,
 		handleCloseSelectedSession,
-		isIdentityConnected,
+		isAppUnlocked,
 		workspaceViewMode,
 	]);
 
@@ -2420,16 +2430,15 @@ function AppShell({
 			<WorkspaceToastProvider value={pushWorkspaceToast}>
 				<SendingSessionsProvider value={sendingSessionIds}>
 					<ComposerInsertProvider value={handleInsertIntoComposer}>
-						{!isIdentityConnected ? (
+						{!isAppUnlocked ? (
 							<GithubIdentityGate
 								identityState={githubIdentityState}
-								onConnectGithub={() => {
-									void handleStartGithubIdentityConnect();
-								}}
+								onConnectGithub={handleConnectGithubFromGate}
 								onCopyGithubCode={(userCode) =>
 									handleCopyGithubDeviceCode(userCode)
 								}
 								onCancelGithubConnect={handleCancelGithubIdentityConnect}
+								onSkipGithubSignIn={handleSkipGithubSignIn}
 							/>
 						) : (
 							<main

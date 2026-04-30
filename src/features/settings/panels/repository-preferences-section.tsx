@@ -15,6 +15,7 @@ import {
 	type RepoPreferences,
 	updateRepoPreferences,
 } from "@/lib/api";
+import { GIT_ACTION_COMMAND_TEMPLATE_HELP } from "@/lib/git-action-command-templates";
 import { helmorQueryKeys } from "@/lib/query-client";
 import {
 	REPO_PREFERENCE_DESCRIPTIONS,
@@ -31,6 +32,28 @@ const PREFERENCE_KEYS: RepoPreferenceKey[] = [
 	"general",
 ];
 
+const COMMAND_PREFERENCE_KEYS = [
+	{
+		key: "createPrCommand",
+		label: "Create PR command override",
+		description:
+			"Optional repo-specific command used by the Create PR agent action.",
+		placeholder: "Inherit the global/default create command.",
+	},
+	{
+		key: "mergePrCommand",
+		label: "Merge PR command override",
+		description:
+			"Optional repo-specific command. Empty keeps the global command or Helmor's built-in merge action.",
+		placeholder: "Inherit the global command or built-in merge action.",
+	},
+] satisfies Array<{
+	key: "createPrCommand" | "mergePrCommand";
+	label: string;
+	description: string;
+	placeholder: string;
+}>;
+
 export function RepositoryPreferencesSection({ repoId }: { repoId: string }) {
 	const queryClient = useQueryClient();
 	const preferencesQuery = useQuery({
@@ -42,6 +65,9 @@ export function RepositoryPreferencesSection({ repoId }: { repoId: string }) {
 	const [drafts, setDrafts] = useState<RepoPreferences>({});
 	const [openKey, setOpenKey] = useState<RepoPreferenceKey | null>(null);
 	const [savingKey, setSavingKey] = useState<RepoPreferenceKey | null>(null);
+	const [savingCommandKey, setSavingCommandKey] = useState<
+		"createPrCommand" | "mergePrCommand" | null
+	>(null);
 	const [previewKey, setPreviewKey] = useState<RepoPreferenceKey | null>(null);
 
 	useEffect(() => {
@@ -63,6 +89,66 @@ export function RepositoryPreferencesSection({ repoId }: { repoId: string }) {
 				</div>
 				<div className="mt-1 text-[12px] leading-snug text-muted-foreground">
 					Repo-level built-in prompts used by Helmor actions and new chats.
+				</div>
+				<div className="mt-4 rounded-lg border border-app-border/30 bg-app-base/20 p-3">
+					<div className="text-[12px] font-medium text-app-foreground">
+						Git action commands
+					</div>
+					<div className="mt-1 text-[12px] leading-snug text-muted-foreground">
+						Leave empty to inherit global settings.{" "}
+						{GIT_ACTION_COMMAND_TEMPLATE_HELP}
+					</div>
+					<div className="mt-3 grid gap-3">
+						{COMMAND_PREFERENCE_KEYS.map((command) => {
+							const value = drafts[command.key] ?? "";
+							const fieldId = `repo-${repoId}-${command.key}`;
+							return (
+								<div key={command.key}>
+									<label htmlFor={fieldId} className="block">
+										<span className="text-[12px] font-medium text-app-foreground">
+											{command.label}
+										</span>
+										<span className="mt-0.5 block text-[12px] leading-snug text-muted-foreground">
+											{command.description}
+										</span>
+										<Textarea
+											id={fieldId}
+											className="mt-2 min-h-[76px] resize-y bg-app-base/30 font-mono text-[12px] placeholder:text-[12px]"
+											placeholder={command.placeholder}
+											value={value}
+											onChange={(event) =>
+												setDrafts((current) => ({
+													...current,
+													[command.key]: event.target.value,
+												}))
+											}
+										/>
+									</label>
+									<div className="mt-2 flex justify-end">
+										<Button
+											size="sm"
+											disabled={savingCommandKey === command.key}
+											onClick={() => {
+												setSavingCommandKey(command.key);
+												void updateRepoPreferences(repoId, {
+													...preferences,
+													[command.key]: value,
+												})
+													.then(async () => {
+														await queryClient.invalidateQueries({
+															queryKey: helmorQueryKeys.repoPreferences(repoId),
+														});
+													})
+													.finally(() => setSavingCommandKey(null));
+											}}
+										>
+											{savingCommandKey === command.key ? "Saving..." : "Save"}
+										</Button>
+									</div>
+								</div>
+							);
+						})}
+					</div>
 				</div>
 				<div className="mt-4 divide-y divide-app-border/20">
 					{PREFERENCE_KEYS.map((key) => {

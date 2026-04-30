@@ -528,6 +528,8 @@ pub struct RepoPreferences {
     pub resolve_conflicts: Option<String>,
     pub branch_rename: Option<String>,
     pub general: Option<String>,
+    pub create_pr_command: Option<String>,
+    pub merge_pr_command: Option<String>,
 }
 
 /// Resolve repo scripts using a fixed priority:
@@ -707,7 +709,9 @@ pub fn load_repo_preferences(repo_id: &str) -> Result<RepoPreferences> {
               custom_prompt_fix_errors,
               custom_prompt_resolve_merge_conflicts,
               custom_prompt_rename_branch,
-              custom_prompt_general
+              custom_prompt_general,
+              custom_command_create_pr,
+              custom_command_merge_pr
             FROM repos
             WHERE id = ?1
             "#,
@@ -722,6 +726,8 @@ pub fn load_repo_preferences(repo_id: &str) -> Result<RepoPreferences> {
                 resolve_conflicts: row.get(2)?,
                 branch_rename: row.get(3)?,
                 general: row.get(4)?,
+                create_pr_command: row.get(5)?,
+                merge_pr_command: row.get(6)?,
             })
         })
         .with_context(|| format!("Repository not found: {repo_id}"))
@@ -739,8 +745,10 @@ pub fn update_repo_preferences(repo_id: &str, preferences: &RepoPreferences) -> 
               custom_prompt_resolve_merge_conflicts = ?3,
               custom_prompt_rename_branch = ?4,
               custom_prompt_general = ?5,
+              custom_command_create_pr = ?6,
+              custom_command_merge_pr = ?7,
               updated_at = datetime('now')
-            WHERE id = ?6
+            WHERE id = ?8
             "#,
             rusqlite::params![
                 normalize_repo_preference(preferences.create_pr.as_deref()),
@@ -748,6 +756,8 @@ pub fn update_repo_preferences(repo_id: &str, preferences: &RepoPreferences) -> 
                 normalize_repo_preference(preferences.resolve_conflicts.as_deref()),
                 normalize_repo_preference(preferences.branch_rename.as_deref()),
                 normalize_repo_preference(preferences.general.as_deref()),
+                normalize_repo_preference(preferences.create_pr_command.as_deref()),
+                normalize_repo_preference(preferences.merge_pr_command.as_deref()),
                 repo_id
             ],
         )
