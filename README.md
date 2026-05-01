@@ -22,7 +22,7 @@
   <img src="src/assets/helmor-screenshot-mix.png" alt="Helmor screenshot" width="100%" />
 </p>
 
-[**Download for macOS** →](https://github.com/dohooo/helmor/releases)
+[**Download for macOS** →](https://github.com/Varuas37/helmor-fork/releases)
 
 ## Contributing
 

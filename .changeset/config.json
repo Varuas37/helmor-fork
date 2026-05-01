@@ -3,7 +3,7 @@
 	"changelog": [
 		"@changesets/changelog-github",
 		{
-			"repo": "dohooo/helmor"
+			"repo": "Varuas37/helmor-fork"
 		}
 	],
 	"commit": false,

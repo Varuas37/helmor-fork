@@ -287,7 +287,7 @@ impl UpdateManager {
             return Ok(None);
         };
 
-        let info = snapshot_from_update(&update);
+        let info = snapshot_from_update(&update, &self.config.release_repository);
 
         {
             let mut state = self.state.lock().expect("update state poisoned");
@@ -463,18 +463,21 @@ fn compute_sleep_duration() -> Duration {
         .max(SCHEDULER_FLOOR)
 }
 
-fn snapshot_from_update(update: &tauri_plugin_updater::Update) -> UpdateInfoSnapshot {
+fn snapshot_from_update(
+    update: &tauri_plugin_updater::Update,
+    release_repository: &str,
+) -> UpdateInfoSnapshot {
     UpdateInfoSnapshot {
         current_version: update.current_version.clone(),
         version: update.version.clone(),
         body: update.body.clone(),
         date: update.date.map(|value| value.to_string()),
-        release_url: release_url_for_version(&update.version),
+        release_url: release_url_for_version(release_repository, &update.version),
     }
 }
 
 // CI enforces tag == `v{package.json.version}` in .github/workflows/publish.yml,
 // so every installable update has a corresponding GitHub release page at this URL.
-fn release_url_for_version(version: &str) -> String {
-    format!("https://github.com/dohooo/helmor/releases/tag/v{version}")
+fn release_url_for_version(release_repository: &str, version: &str) -> String {
+    format!("https://github.com/{release_repository}/releases/tag/v{version}")
 }

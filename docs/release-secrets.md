@@ -7,6 +7,10 @@ Configure these GitHub repository secrets before running the macOS release workf
 - `GITHUB_TOKEN`
   - Provided automatically by GitHub Actions
   - Must have `contents: write` permission in the workflow
+- `HELMOR_RELEASE_PAT`
+  - Optional
+  - If omitted, `release-plan.yml` pushes the release tag with `GITHUB_TOKEN` and explicitly dispatches `publish.yml`
+  - If provided, it must have permission to push tags to this repository
 
 ## Required for Tauri updater signing
 
@@ -14,12 +18,16 @@ Configure these GitHub repository secrets before running the macOS release workf
   - Contents of your Tauri updater private key
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
   - Password used when generating the updater private key
+
+## Optional updater overrides
+
 - `HELMOR_UPDATER_PUBKEY`
   - Public key embedded into the app at build time
+  - Defaults to the public key committed in `src-tauri/tauri.conf.json`
 - `HELMOR_UPDATER_ENDPOINTS`
   - Comma-separated updater endpoint list
-  - Stable-only default:
-    - `https://github.com/dohooo/helmor/releases/latest/download/latest.json`
+  - Defaults to:
+    - `https://github.com/Varuas37/helmor-fork/releases/latest/download/latest.json`
 
 GitHub release publication uses the official `tauri-action`. It uploads the signed
 updater bundle and generates the `latest.json` manifest consumed by Helmor's updater.

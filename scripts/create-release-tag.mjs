@@ -33,4 +33,49 @@ try {
 }
 
 execSync(`git push origin ${tag}`, { stdio: "inherit" });
+
+if (process.env.GITHUB_ACTIONS === "true" && !process.env.HELMOR_RELEASE_PAT) {
+	await dispatchPublishWorkflow(tag);
+}
+
 console.log(`New tag: ${tag}`);
+
+async function dispatchPublishWorkflow(tag) {
+	const token = process.env.GITHUB_TOKEN;
+	const repository = process.env.GITHUB_REPOSITORY;
+	const apiUrl = process.env.GITHUB_API_URL ?? "https://api.github.com";
+
+	if (!token) {
+		console.error("GITHUB_TOKEN is required to dispatch publish.yml.");
+		process.exit(1);
+	}
+	if (!repository) {
+		console.error("GITHUB_REPOSITORY is required to dispatch publish.yml.");
+		process.exit(1);
+	}
+
+	const response = await fetch(
+		`${apiUrl}/repos/${repository}/actions/workflows/publish.yml/dispatches`,
+		{
+			method: "POST",
+			headers: {
+				Accept: "application/vnd.github+json",
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+				"X-GitHub-Api-Version": "2022-11-28",
+			},
+			body: JSON.stringify({
+				ref: tag,
+				inputs: { draft: "false" },
+			}),
+		},
+	);
+
+	if (!response.ok) {
+		const body = await response.text();
+		console.error(`Failed to dispatch publish.yml: ${response.status} ${body}`);
+		process.exit(1);
+	}
+
+	console.log(`Dispatched publish.yml for ${tag}`);
+}

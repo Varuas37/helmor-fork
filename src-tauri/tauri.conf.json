@@ -16,9 +16,9 @@
 			}
 		},
 		"updater": {
-			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5QkE5MEUwRjc5N0EzQ0QKUldUTm81ZjM0SkM2T2RweXFnOTYvanRkSENTRW9Zc25sMXRmeFlxazN1MFNZdjZPb2crVWNISzMK",
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFEMDcyNURCMEQzM0U2REUKUldUZTVqTU4yeVVISGZVd0sxc3EycTBtQVRZZGp0WU9IL2lGMjQyVnNQM1luSXJJcnVnWGJQQ2EK",
 			"endpoints": [
-				"https://github.com/dohooo/helmor/releases/latest/download/latest.json"
+				"https://github.com/Varuas37/helmor-fork/releases/latest/download/latest.json"
 			]
 		}
 	},
