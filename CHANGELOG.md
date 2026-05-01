@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.1
+
+### Patch Changes
+
+- [`82628e3`](https://github.com/Varuas37/helmor-fork/commit/82628e3831fb696e1b879dbb5cbcf1d849d23f8b) Thanks [@Varuas37](https://github.com/Varuas37)! - Point release automation and in-app update checks at this GitHub repository, with release publication able to dispatch from the built-in GitHub token.
+
+- [`16e2df8`](https://github.com/Varuas37/helmor-fork/commit/16e2df8a6dcad7d09d30ac32f9b57af774123cb0) Thanks [@Varuas37](https://github.com/Varuas37)! - Add configurable workspace file icons, external file opening, and experimental mainline diff highlights in the editor.
+
 ## 0.12.0
 
 ### Minor Changes
